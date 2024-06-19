@@ -89,6 +89,16 @@ const SignInPage = () => {
           Sign up
         </Text>
       </Text>
+
+      <Text style={styles.linkText}>
+        Forget your password?{" "}
+        <Text
+          style={styles.link}
+          onPress={() => navigation.navigate("ForgetPassword")}
+        >
+          Click here
+        </Text>
+      </Text>
     </View>
   );
 };

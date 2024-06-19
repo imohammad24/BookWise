@@ -3,8 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
-  Image,
   TouchableOpacity,
   Alert,
   Modal,
@@ -14,9 +12,9 @@ import {
 import { useRoute, useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import getUri from "../getUrl";
-import defaultHotelImage from "../assets/Jerusalem.png";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import ModalDateTimePicker from "react-native-modal-datetime-picker";
+import HotelDetails from "../components/HotelDetails";
+import RoomList from "../components/RoomList";
 
 const RoomsPage = () => {
   const [hotel, setHotel] = useState(null);
@@ -28,6 +26,8 @@ const RoomsPage = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [imagePath, setImagePath] = useState(null);
+  const [location, setLocation] = useState(null);
   const route = useRoute();
   const { hotel: initialHotel } = route.params;
   const navigation = useNavigation();
@@ -87,7 +87,29 @@ const RoomsPage = () => {
 
             if (roomsResponse.ok) {
               const roomsData = await roomsResponse.json();
-              setRooms(roomsData.rooms);
+              const roomsWithTypes = await Promise.all(
+                roomsData.rooms.map(async (room) => {
+                  const roomTypeResponse = await fetch(
+                    `https://${getUri()}${
+                      room.links.find((link) => link.rel === "room type").href
+                    }`,
+                    {
+                      method: "GET",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                    }
+                  );
+                  if (roomTypeResponse.ok) {
+                    const roomTypeData = await roomTypeResponse.json();
+                    return { ...room, roomType: roomTypeData.type };
+                  } else {
+                    console.error("Failed to fetch room type");
+                    return room;
+                  }
+                })
+              );
+              setRooms(roomsWithTypes);
             } else {
               console.error("Failed to fetch rooms");
             }
@@ -108,6 +130,12 @@ const RoomsPage = () => {
             } else {
               console.error("Failed to fetch amenities");
             }
+
+            const imagePath = await fetchHotelImagePath(initialHotel.hotelId);
+            setImagePath(imagePath);
+
+            const locationData = await fetchHotelLocation(initialHotel.hotelId);
+            setLocation(locationData);
           } else {
             console.error("Failed to fetch hotel details");
           }
@@ -120,27 +148,84 @@ const RoomsPage = () => {
     fetchHotelDetails();
   }, [initialHotel.hotelId]);
 
-  const handleAddToCart = (room) => {
+  const fetchHotelImagePath = async (hotelId) => {
+    try {
+      const response = await fetch(
+        `https://${getUri()}/api/hotel/${hotelId}/hotelImage`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // Assuming data.imagePath is like "C:/SoftwareProject/TABP/src/TABP.Infrastructure/images/3013a25a-b8c5-494a-87b6-ea8f4c6595dd.png"
+        // Extract the filename from the path
+        const filename = data.imagePath.split("/").pop(); // Get the last part after splitting by '/'
+
+        // Construct the full URL to the local server
+        return `http://localhost:3000/images/${filename}`; // this is image uri
+      } else {
+        console.error(`Failed to retrieve image for hotel ${hotelId}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`Error fetching image for hotel ${hotelId}:`, error);
+      return null;
+    }
+  };
+
+  const fetchHotelLocation = async (hotelId) => {
+    try {
+      const response = await fetch(
+        `https://${getUri()}/api/hotel/${hotelId}/location`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const locationData = await response.json();
+        return locationData;
+      } else {
+        console.error("Failed to fetch hotel location");
+        return null;
+      }
+    } catch (error) {
+      console.error("Error fetching hotel location:", error);
+      return null;
+    }
+  };
+
+  const handleAddToCart = async (room) => {
     setSelectedRoom(room);
     setModalVisible(true);
   };
 
   const handleConfirmDates = async () => {
-    setModalVisible(false);
+    const cartItem = {
+      roomId: selectedRoom.roomId,
+      startDate,
+      endDate,
+      numberOfResidents: 0, // Adjust as needed
+    };
+
     try {
       const userId = await AsyncStorage.getItem("userId");
+      if (!userId) {
+        Alert.alert("Error", "User ID not found");
+        return;
+      }
       const authToken = await AsyncStorage.getItem("authToken");
-
       if (!authToken) {
         throw new Error("No auth token found");
       }
-
-      const requestBody = {
-        roomId: selectedRoom.roomId,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        numberOfResidents: 0,
-      };
 
       const response = await fetch(
         `https://${getUri()}/api/user/${userId}/Cart`,
@@ -150,88 +235,50 @@ const RoomsPage = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${authToken}`,
           },
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify(cartItem),
         }
       );
-      console.log(`https://${getUri()}/api/user/${userId}/Cart`);
-      console.log(requestBody);
 
       if (response.ok) {
-        Alert.alert("Success", "Room added to cart");
+        setModalVisible(false);
+        Alert.alert("Success", "Room added to cart successfully!");
       } else {
-        const errorText = await response.text();
-        Alert.alert("Error", errorText);
+        console.error("Failed to add room to cart");
+        Alert.alert("Error", "Failed to add room to cart");
       }
     } catch (error) {
-      console.error("Error adding to cart:", error);
-      Alert.alert("Error", `An unexpected error occurred: ${error.message}`);
+      console.error("Error adding item to cart:", error);
+      Alert.alert("Error", "Failed to add room to cart");
     }
   };
 
   const handleStartDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || startDate;
-    setShowStartDatePicker(false);
+    setShowStartDatePicker(Platform.OS === "ios");
     setStartDate(currentDate);
   };
 
   const handleEndDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || endDate;
-    setShowEndDatePicker(false);
+    setShowEndDatePicker(Platform.OS === "ios");
     setEndDate(currentDate);
   };
-
-  const renderRoomItem = ({ item }) => (
-    <View style={styles.roomCard}>
-      <Text style={styles.roomTitle}>
-        {item.roomNumber} - {item.roomType}
-      </Text>
-      <Text>Capacity: {item.capacity}</Text>
-      <Text>Price: ${item.price}</Text>
-      {item.discount > 0 && <Text>Discount: {item.discount}%</Text>}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => handleAddToCart(item)}
-      >
-        <Text style={styles.buttonText}>Add to Cart</Text>
-      </TouchableOpacity>
-    </View>
-  );
 
   return (
     <View style={styles.container}>
       {hotel ? (
-        <View style={styles.hotelInfo}>
-          <Image source={defaultHotelImage} style={styles.hotelImage} />
-          <Text style={styles.hotelName}>{hotel.hotelName}</Text>
-          <Text style={styles.hotelDescription}>{hotel.hotelDescription}</Text>
-          <View style={styles.ratingContainer}>
-            {[...Array(5)].map((_, index) => (
-              <Text key={index} style={styles.star}>
-                {index < hotel.rating ? "★" : "☆"}
-              </Text>
-            ))}
-          </View>
-          <View style={styles.amenitiesContainer}>
-            <Text style={styles.amenitiesTitle}>Amenities:</Text>
-            {amenities.length > 0 ? (
-              amenities.map((amenity, index) => (
-                <Text key={index} style={styles.amenity}>
-                  {amenity.name}
-                </Text>
-              ))
-            ) : (
-              <Text style={styles.amenity}>No amenities available</Text>
-            )}
-          </View>
+        <View>
+          <HotelDetails
+            hotel={hotel}
+            imagePath={imagePath}
+            amenities={amenities}
+            location={location}
+          />
+          <RoomList rooms={rooms} handleAddToCart={handleAddToCart} />
         </View>
       ) : (
         <Text>Loading hotel information...</Text>
       )}
-      <FlatList
-        data={rooms}
-        keyExtractor={(item) => item.roomId}
-        renderItem={renderRoomItem}
-      />
       <Modal
         visible={isModalVisible}
         transparent={true}
@@ -318,73 +365,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#fff",
-  },
-  hotelInfo: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  hotelImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  hotelName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
-  },
-  hotelDescription: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  ratingContainer: {
-    flexDirection: "row",
-    marginBottom: 10,
-  },
-  star: {
-    fontSize: 24,
-    color: "#ffd700",
-  },
-  amenitiesContainer: {
-    marginBottom: 20,
-  },
-  amenitiesTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  amenity: {
-    fontSize: 16,
-    color: "#666",
-  },
-  roomCard: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 15,
-    marginVertical: 10,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  roomTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
-  },
-  button: {
-    backgroundColor: "#004051",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
   },
   modalContainer: {
     flex: 1,

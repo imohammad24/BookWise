@@ -96,7 +96,12 @@ const SearchResultsPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        return data.imagePath;
+        // Assuming data.imagePath is like "C:/SoftwareProject/TABP/src/TABP.Infrastructure/images/3013a25a-b8c5-494a-87b6-ea8f4c6595dd.png"
+        // Extract the filename from the path
+        const filename = data.imagePath.split("/").pop(); // Get the last part after splitting by '/'
+
+        // Construct the full URL to the local server
+        return `http://localhost:3000/images/${filename}`; // this is image uri
       } else {
         console.error(`Failed to retrieve image for hotel ${hotelId}`);
         return null;
@@ -107,17 +112,17 @@ const SearchResultsPage = () => {
     }
   };
 
-  const renderHotelCard = ({ item }) => {
+  const HotelCard = ({ hotel }) => {
     const [imagePath, setImagePath] = useState(null);
 
     useEffect(() => {
       const getImagePath = async () => {
-        const path = await fetchHotelImagePath(item.hotelId);
+        const path = await fetchHotelImagePath(hotel.hotelId);
         setImagePath(path);
       };
 
       getImagePath();
-    }, [item.hotelId]);
+    }, [hotel.hotelId]);
 
     return (
       <View style={styles.card}>
@@ -128,18 +133,18 @@ const SearchResultsPage = () => {
             <Text>No Image Available</Text>
           </View>
         )}
-        <Text style={styles.cardTitle}>{item.hotelName}</Text>
-        <Text style={styles.cardDescription}>{item.hotelDescription}</Text>
+        <Text style={styles.cardTitle}>{hotel.hotelName}</Text>
+        <Text style={styles.cardDescription}>{hotel.hotelDescription}</Text>
         <View style={styles.ratingContainer}>
           {[...Array(5)].map((_, index) => (
             <Text key={index} style={styles.star}>
-              {index < item.rating ? "★" : "☆"}
+              {index < hotel.rating ? "★" : "☆"}
             </Text>
           ))}
         </View>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate("Rooms", { hotel: item })}
+          onPress={() => navigation.navigate("Rooms", { hotel })}
         >
           <Text style={styles.buttonText}>View Rooms</Text>
         </TouchableOpacity>
@@ -225,7 +230,7 @@ const SearchResultsPage = () => {
       <FlatList
         data={hotels}
         keyExtractor={(item) => item.hotelId}
-        renderItem={renderHotelCard}
+        renderItem={({ item }) => <HotelCard hotel={item} />}
         ListEmptyComponent={
           <Text style={styles.noHotelsText}>No hotels found</Text>
         }

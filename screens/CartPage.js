@@ -61,6 +61,26 @@ const CartPage = () => {
               const roomData = await roomResponse.json();
               const room = roomData.rooms[0];
 
+              // Fetch room type
+              const roomTypeResponse = await fetch(
+                `https://${getUri()}${
+                  room.links.find((link) => link.rel === "room type").href
+                }`,
+                {
+                  method: "GET",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`,
+                  },
+                }
+              );
+
+              if (!roomTypeResponse.ok) {
+                return item;
+              }
+
+              const roomTypeData = await roomTypeResponse.json();
+
               // Fetch hotel details
               const hotelResponse = await fetch(
                 `https://${getUri()}${
@@ -91,6 +111,7 @@ const CartPage = () => {
                 ...item,
                 hotelName: hotel.hotelName,
                 roomNumber: room.roomNumber,
+                roomType: roomTypeData.type,
                 numberOfDays,
                 totalPrice: item.price * numberOfDays,
               };
@@ -163,7 +184,7 @@ const CartPage = () => {
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItem}>
       <Text style={styles.cartItemTitle}>
-        Hotel: {item.hotelName} - Room {item.roomNumber}
+        Hotel: {item.hotelName} - Room {item.roomNumber} - {item.roomType}
       </Text>
       <Text>Start Date: {new Date(item.startDate).toLocaleDateString()}</Text>
       <Text>End Date: {new Date(item.endDate).toLocaleDateString()}</Text>

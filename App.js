@@ -10,6 +10,7 @@ import SignInPage from "./screens/SignInPage";
 import SignUpPage from "./screens/SignUpPage";
 import PaymentPage from "./screens/PaymentPage";
 import RoomsPage from "./screens/RoomsPage";
+import ForgetPasswordPage from "./screens/ForgetPasswordPage";
 import FeaturedDeals from "./screens/FeaturedDeals";
 
 const Stack = createStackNavigator();
@@ -30,6 +31,7 @@ const App = () => {
         <Stack.Screen name="SignUp" component={SignUpPage} />
         <Stack.Screen name="Payment" component={PaymentPage} />
         <Stack.Screen name="Rooms" component={RoomsPage} />
+        <Stack.Screen name="ForgetPassword" component={ForgetPasswordPage} />
         <Stack.Screen name="FeaturedDeals" component={FeaturedDeals} />
       </Stack.Navigator>
     </NavigationContainer>

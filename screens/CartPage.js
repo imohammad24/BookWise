@@ -107,13 +107,18 @@ const CartPage = () => {
               const numberOfDays =
                 (endDate - startDate) / (1000 * 60 * 60 * 24);
 
+              const discountedPrice = item.discount
+                ? item.price * (1 - item.discount / 100)
+                : item.price;
+
               return {
                 ...item,
                 hotelName: hotel.hotelName,
                 roomNumber: room.roomNumber,
                 roomType: roomTypeData.type,
                 numberOfDays,
-                totalPrice: item.price * numberOfDays,
+                totalPrice: discountedPrice * numberOfDays,
+                discountedPrice,
               };
             })
           );
@@ -173,10 +178,6 @@ const CartPage = () => {
     }
   };
 
-  const handlePayItem = (item) => {
-    navigation.navigate("Payment", { roomDetails: item });
-  };
-
   const handlePayAll = () => {
     navigation.navigate("Payment", { cartItems });
   };
@@ -188,17 +189,16 @@ const CartPage = () => {
       </Text>
       <Text>Start Date: {new Date(item.startDate).toLocaleDateString()}</Text>
       <Text>End Date: {new Date(item.endDate).toLocaleDateString()}</Text>
-      <Text>Price: ${item.price} per night</Text>
+      <Text>Price: ${item.price.toFixed(2)} per night</Text>
       <Text>Number of nights: {item.numberOfDays}</Text>
       <Text>Total Price: ${item.totalPrice.toFixed(2)}</Text>
       {item.discount > 0 && <Text>Discount: {item.discount}%</Text>}
+      {item.discount > 0 && (
+        <Text>
+          Price After Discount: ${item.discountedPrice.toFixed(2)} per night
+        </Text>
+      )}
       <View style={styles.buttonsContainer}>
-        <TouchableOpacity
-          style={styles.payButton}
-          onPress={() => handlePayItem(item)}
-        >
-          <Text style={styles.payButtonText}>Pay Now</Text>
-        </TouchableOpacity>
         <TouchableOpacity
           style={styles.removeButton}
           onPress={() => handleRemoveItem(item.cartItemId)}
@@ -271,17 +271,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   removeButtonText: {
-    color: "#fff",
-    fontSize: 14,
-  },
-  payButton: {
-    backgroundColor: "#004051",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  payButtonText: {
     color: "#fff",
     fontSize: 14,
   },

@@ -13,6 +13,7 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import getUri from "../getUrl";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import ModalDateTimePicker from "react-native-modal-datetime-picker";
 import HotelDetails from "../components/HotelDetails";
 import RoomList from "../components/RoomList";
 
@@ -109,7 +110,16 @@ const RoomsPage = () => {
                   }
                 })
               );
-              setRooms(roomsWithTypes);
+
+              // Fetch room images
+              const roomsWithImages = await Promise.all(
+                roomsWithTypes.map(async (room) => {
+                  const roomImages = await fetchRoomImages(room.roomId);
+                  return { ...room, images: roomImages };
+                })
+              );
+
+              setRooms(roomsWithImages);
             } else {
               console.error("Failed to fetch rooms");
             }
@@ -148,6 +158,34 @@ const RoomsPage = () => {
     fetchHotelDetails();
   }, [initialHotel.hotelId]);
 
+  const fetchRoomImages = async (roomId) => {
+    try {
+      const response = await fetch(
+        `https://${getUri()}/api/room/${roomId}/roomImage`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.roomImages.map((image) => {
+          const filename = image.imageBath.split("/").pop();
+          return `http://localhost:3000/images/${filename}`;
+        });
+      } else {
+        console.error(`Failed to retrieve images for room ${roomId}`);
+        return [];
+      }
+    } catch (error) {
+      console.error(`Error fetching images for room ${roomId}:`, error);
+      return [];
+    }
+  };
+
   const fetchHotelImagePath = async (hotelId) => {
     try {
       const response = await fetch(
@@ -162,12 +200,8 @@ const RoomsPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        // Assuming data.imagePath is like "C:/SoftwareProject/TABP/src/TABP.Infrastructure/images/3013a25a-b8c5-494a-87b6-ea8f4c6595dd.png"
-        // Extract the filename from the path
-        const filename = data.imagePath.split("/").pop(); // Get the last part after splitting by '/'
-
-        // Construct the full URL to the local server
-        return `http://localhost:3000/images/${filename}`; // this is image uri
+        const filename = data.imagePath.split("/").pop();
+        return `http://localhost:3000/images/${filename}`;
       } else {
         console.error(`Failed to retrieve image for hotel ${hotelId}`);
         return null;
@@ -252,33 +286,41 @@ const RoomsPage = () => {
     }
   };
 
-  const handleStartDateChange = (event, selectedDate) => {
+  const handleStartDateChange = (date) => {
+    // setShowStartDatePicker(false);
+    // setStartDate(date);
     const currentDate = selectedDate || startDate;
     setShowStartDatePicker(Platform.OS === "ios");
     setStartDate(currentDate);
   };
 
-  const handleEndDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || endDate;
-    setShowEndDatePicker(Platform.OS === "ios");
-    setEndDate(currentDate);
+  const handleEndDateChange = (date) => {
+    // setShowEndDatePicker(false);
+    // setEndDate(date);
+    const currentDate = selectedDate || startDate;
+    setShowStartDatePicker(Platform.OS === "ios");
+    setStartDate(currentDate);
   };
 
   return (
     <View style={styles.container}>
       {hotel ? (
-        <View>
-          <HotelDetails
-            hotel={hotel}
-            imagePath={imagePath}
-            amenities={amenities}
-            location={location}
-          />
-          <RoomList rooms={rooms} handleAddToCart={handleAddToCart} />
-        </View>
+        <HotelDetails
+          hotel={hotel}
+          amenities={amenities}
+          imagePath={imagePath}
+          location={location}
+        />
       ) : (
-        <Text>Loading hotel information...</Text>
+        <Text>Loading hotel details...</Text>
       )}
+
+      {rooms.length > 0 ? (
+        <RoomList rooms={rooms} onAddToCart={handleAddToCart} />
+      ) : (
+        <Text>Loading rooms...</Text>
+      )}
+
       <Modal
         visible={isModalVisible}
         transparent={true}
@@ -398,7 +440,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   dateInput: {
-    width: "100%",
+    width: "90%",
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,

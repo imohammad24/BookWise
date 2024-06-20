@@ -22,16 +22,11 @@ const destinations = [
   { name: "Ramallah", image: require("../assets/Ramallah.png") },
 ];
 
-const latestVisitedHotel = {
-  name: "Hotel ABC",
-  image: require("../assets/HotelABC.png"),
-  description: "A luxurious stay with a stunning view.",
-};
-
 const HomePage = () => {
   const [currentDestinationIndex, setCurrentDestinationIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [userData, setUserData] = useState(null);
+  const [latestVisitedHotel, setLatestVisitedHotel] = useState(null);
   const navigation = useNavigation();
 
   const clearSearch = () => {
@@ -48,6 +43,62 @@ const HomePage = () => {
   }, []);
 
   useEffect(() => {
+    const fetchLatestVisitedHotel = async () => {
+      try {
+        const userId = await AsyncStorage.getItem("userId");
+        if (userId) {
+          const response = await fetch(
+            `https://${getUri()}/api/hotel/user/${userId}`
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data.length > 0) {
+              const latestHotel = data[0]; // assuming the latest hotel is the first in the list
+              const imagePath = await fetchHotelImagePath(latestHotel.hotelId);
+              setLatestVisitedHotel({
+                hotelId: latestHotel.hotelId,
+                name: latestHotel.hotelName,
+                image: { uri: imagePath },
+                description: latestHotel.hotelDescription,
+              });
+            } else {
+              setLatestVisitedHotel("No hotels visited");
+            }
+          } else {
+            console.error("Failed to fetch latest visited hotel");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching latest visited hotel:", error);
+      }
+    };
+
+    const fetchHotelImagePath = async (hotelId) => {
+      try {
+        const response = await fetch(
+          `https://${getUri()}/api/hotel/${hotelId}/hotelImage`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const filename = data.imagePath.split("/").pop();
+          return `http://localhost:3000/images/${filename}`;
+        } else {
+          console.error(`Failed to retrieve image for hotel ${hotelId}`);
+          return null;
+        }
+      } catch (error) {
+        console.error(`Error fetching image for hotel ${hotelId}:`, error);
+        return null;
+      }
+    };
+
     const checkUserSignedIn = async () => {
       const authToken = await AsyncStorage.getItem("authToken");
       const userId = await AsyncStorage.getItem("userId");
@@ -65,6 +116,7 @@ const HomePage = () => {
           const data = await response.json();
           if (data.length > 0) {
             setUserData(data[0]); // assuming the response is an array with a single user object
+            fetchLatestVisitedHotel();
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -167,24 +219,32 @@ const HomePage = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Latest Visited Hotel</Text>
           <Text style={styles.sectionSubtitle}>Recently visited by you</Text>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("SearchResults", {
-                hotel: latestVisitedHotel.name,
-              })
-            }
-          >
-            <Image
-              source={latestVisitedHotel.image}
-              style={styles.destinationImage}
-            />
-            <Text style={styles.destinationText}>
-              {latestVisitedHotel.name}
-            </Text>
-            <Text style={styles.hotelDescription}>
-              {latestVisitedHotel.description}
-            </Text>
-          </TouchableOpacity>
+          {latestVisitedHotel ? (
+            latestVisitedHotel === "No hotels visited" ? (
+              <Text style={styles.noHotelText}>
+                You have not visited any hotel before, make your first visit.
+              </Text>
+            ) : (
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("Rooms", { hotel: latestVisitedHotel })
+                }
+              >
+                <Image
+                  source={latestVisitedHotel.image}
+                  style={styles.destinationImage}
+                />
+                <Text style={styles.destinationText}>
+                  {latestVisitedHotel.name}
+                </Text>
+                <Text style={styles.hotelDescription}>
+                  {latestVisitedHotel.description}
+                </Text>
+              </TouchableOpacity>
+            )
+          ) : (
+            <Text>Loading...</Text>
+          )}
         </View>
       </ScrollView>
 
@@ -309,6 +369,11 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontSize: 14,
     color: "#666",
+  },
+  noHotelText: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 5,
   },
   footer: {
     flexDirection: "row",

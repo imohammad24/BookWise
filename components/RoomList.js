@@ -1,41 +1,59 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
+  Image,
+  StyleSheet,
 } from "react-native";
 
-const RoomList = ({ rooms, handleAddToCart }) => {
-  const renderRoomItem = ({ item }) => (
-    <View style={styles.roomCard}>
-      <Text style={styles.roomTitle}>
-        {item.roomNumber} - {item.roomType}
-      </Text>
-      <Text>Capacity: {item.capacity}</Text>
-      <Text>Price: ${item.price}</Text>
-      {item.discount > 0 && <Text>Discount: {item.discount}%</Text>}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => handleAddToCart(item)}
-      >
-        <Text style={styles.buttonText}>Add to Cart</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
+const RoomList = ({ rooms, onAddToCart }) => {
   return (
     <FlatList
       data={rooms}
       keyExtractor={(item) => item.roomId}
-      renderItem={renderRoomItem}
+      renderItem={({ item }) => (
+        <RoomCard room={item} onAddToCart={onAddToCart} />
+      )}
     />
   );
 };
 
+const RoomCard = ({ room, onAddToCart }) => {
+  const { roomNumber, roomType, capacity, price, discount, images } = room;
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    const imageInterval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
+    }, 5000);
+
+    return () => clearInterval(imageInterval);
+  }, [images]);
+
+  return (
+    <View style={styles.card}>
+      {images && images.length > 0 && (
+        <Image
+          source={{ uri: images[currentImageIndex] }}
+          style={styles.image}
+        />
+      )}
+      <Text style={styles.title}>{roomType}</Text>
+      <Text>Room Number: {roomNumber}</Text>
+      <Text>Capacity: {capacity}</Text>
+      <Text>Price: ${price}</Text>
+      {discount > 0 && <Text>Discount: {discount}%</Text>}
+      <TouchableOpacity style={styles.button} onPress={() => onAddToCart(room)}>
+        <Text style={styles.buttonText}>Add to Cart</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
-  roomCard: {
+  card: {
     backgroundColor: "#f9f9f9",
     borderRadius: 8,
     padding: 15,
@@ -43,7 +61,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
   },
-  roomTitle: {
+  image: {
+    width: "100%",
+    height: 200,
+    borderRadius: 10,
+  },
+  title: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
@@ -58,7 +81,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#fff",
-    fontSize: 16,
+    fontWeight: "bold",
   },
 });
 

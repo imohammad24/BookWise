@@ -14,24 +14,47 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import getUri from "../getUrl";
 
-const destinations = [
-  { name: "Nablus", image: require("../assets/Nablus.png") },
-  { name: "Acre", image: require("../assets/Acre.png") },
-  { name: "Jerusalem", image: require("../assets/Jerusalem.png") },
-  { name: "Gaza", image: require("../assets/Gaza.png") },
-  { name: "Ramallah", image: require("../assets/Ramallah.png") },
-];
-
 const HomePage = () => {
   const [currentDestinationIndex, setCurrentDestinationIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [userData, setUserData] = useState(null);
   const [latestVisitedHotel, setLatestVisitedHotel] = useState(null);
+  const [destinations, setDestinations] = useState([]);
+  const [loadingDestinations, setLoadingDestinations] = useState(true);
   const navigation = useNavigation();
 
   const clearSearch = () => {
     setSearchQuery("");
   };
+
+  useEffect(() => {
+    const fetchMostVisitedCities = async () => {
+      try {
+        const response = await fetch(
+          `https://${getUri()}/api/location/cities/mostVisited`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const formattedDestinations = data.map((city) => {
+            const filename = city.cityImagePath.split("/").pop();
+            return {
+              name: city.cityName,
+              image: { uri: `http://localhost:3000/images/${filename}` },
+            };
+          });
+          setDestinations(formattedDestinations);
+        } else {
+          console.error("Failed to fetch most visited cities");
+        }
+      } catch (error) {
+        console.error("Error fetching most visited cities:", error);
+      } finally {
+        setLoadingDestinations(false);
+      }
+    };
+
+    fetchMostVisitedCities();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -40,7 +63,7 @@ const HomePage = () => {
       );
     }, 7000);
     return () => clearInterval(interval);
-  }, []);
+  }, [destinations]);
 
   useEffect(() => {
     const fetchLatestVisitedHotel = async () => {
@@ -128,6 +151,42 @@ const HomePage = () => {
     checkUserSignedIn();
   }, []);
 
+  const fetchFeaturedDeals = async () => {
+    try {
+      const response = await fetch(`https://${getUri()}/api/room/featuredDeal`);
+      if (response.ok) {
+        const featuredDeals = await response.json();
+        const roomDetails = await Promise.all(
+          featuredDeals.map(async (deal) => {
+            const roomResponse = await fetch(
+              `https://${getUri()}/api/room?roomId=${deal.roomId}`
+            );
+            if (roomResponse.ok) {
+              const roomData = await roomResponse.json();
+              return {
+                ...deal,
+                room: roomData.rooms[0],
+              };
+            }
+            return deal;
+          })
+        );
+        return roomDetails;
+      } else {
+        console.error("Failed to fetch featured deals");
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching featured deals:", error);
+      return [];
+    }
+  };
+
+  const handleFeaturedDealsPress = async () => {
+    const featuredDeals = await fetchFeaturedDeals();
+    navigation.navigate("FeaturedDeals", { featuredDeals });
+  };
+
   const currentDestination = destinations[currentDestinationIndex];
 
   return (
@@ -156,27 +215,6 @@ const HomePage = () => {
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="City"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity style={styles.clearButton} onPress={clearSearch}>
-              <Ionicons name="close-circle" size={20} color="gray" />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={() =>
-              navigation.navigate("SearchResults", { city: searchQuery })
-            }
-          >
-            <Ionicons name="search" size={20} color="gray" />
-          </TouchableOpacity>
-        </View>
 
         {/* Trending Destinations */}
         <View style={styles.section}>
@@ -184,30 +222,32 @@ const HomePage = () => {
           <Text style={styles.sectionSubtitle}>
             Most popular choices for travelers from Palestine
           </Text>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate("SearchResults", {
-                city: currentDestination.name,
-              })
-            }
-          >
-            <Image
-              source={currentDestination.image}
-              style={styles.destinationImage}
-            />
-            <Text style={styles.destinationText}>
-              {currentDestination.name}
-            </Text>
-          </TouchableOpacity>
+          {loadingDestinations ? (
+            <Text>Loading...</Text>
+          ) : (
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("SearchResults", {
+                  city: currentDestination.name,
+                })
+              }
+            >
+              <Image
+                source={currentDestination.image}
+                style={styles.destinationImage}
+              />
+              <Text style={styles.destinationText}>
+                {currentDestination.name}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Featured Deals */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Featured Deals</Text>
           <Text style={styles.sectionSubtitle}>Special offers for you</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("FeaturedDeals")}
-          >
+          <TouchableOpacity onPress={handleFeaturedDealsPress}>
             <Image
               source={require("../assets/Offer.png")}
               style={styles.dealImage}

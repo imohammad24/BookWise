@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons"; // Assuming you are using Expo
 
 import getUri from "../getUrl";
@@ -32,8 +32,16 @@ const SearchResultsPage = () => {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showSearchForm, setShowSearchForm] = useState(true); // New state
   const navigation = useNavigation();
+  const route = useRoute();
 
-  const handleSearch = async () => {
+  useEffect(() => {
+    if (route.params?.city) {
+      setCity(route.params.city);
+      handleSearch(route.params.city);
+    }
+  }, [route.params?.city]);
+
+  const handleSearch = async (searchCity) => {
     try {
       const queryParams = new URLSearchParams();
 
@@ -43,7 +51,7 @@ const SearchResultsPage = () => {
       if (maxPrice) queryParams.append("maxPrice", parseFloat(maxPrice));
       queryParams.append("startDate", startDate.toISOString().split("T")[0]);
       queryParams.append("endDate", endDate.toISOString().split("T")[0]);
-      if (city) queryParams.append("city", city);
+      if (searchCity || city) queryParams.append("city", searchCity || city);
 
       const baseUrl = `https://${getUri()}/api/hotel`;
       const url = queryParams.toString()
@@ -222,7 +230,10 @@ const SearchResultsPage = () => {
             value={city}
             onChangeText={setCity}
           />
-          <TouchableOpacity style={styles.button} onPress={handleSearch}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => handleSearch()}
+          >
             <Text style={styles.buttonText}>Search</Text>
           </TouchableOpacity>
         </View>

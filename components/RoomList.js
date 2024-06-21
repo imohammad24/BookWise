@@ -32,6 +32,9 @@ const RoomCard = ({ room, onAddToCart }) => {
     return () => clearInterval(imageInterval);
   }, [images]);
 
+  const discountedPrice =
+    discount > 0 ? price - (price * discount) / 100 : price;
+
   return (
     <View style={styles.card}>
       {images && images.length > 0 && (
@@ -43,8 +46,15 @@ const RoomCard = ({ room, onAddToCart }) => {
       <Text style={styles.title}>{roomType}</Text>
       <Text>Room Number: {roomNumber}</Text>
       <Text>Capacity: {capacity}</Text>
-      <Text>Price: ${price}</Text>
-      {discount > 0 && <Text>Discount: {discount}%</Text>}
+      <Text>Price: ${price.toFixed(2)} per night</Text>
+      {discount > 0 && (
+        <>
+          <Text>Discount: {discount}%</Text>
+          <Text>
+            Price after discount: ${discountedPrice.toFixed(2)} per night
+          </Text>
+        </>
+      )}
       <TouchableOpacity style={styles.button} onPress={() => onAddToCart(room)}>
         <Text style={styles.buttonText}>Add to Cart</Text>
       </TouchableOpacity>

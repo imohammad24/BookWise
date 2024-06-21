@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   ActivityIndicator,
   Alert,
   TouchableOpacity,
@@ -75,13 +74,18 @@ const ProfilePage = () => {
     );
   }
 
+  const getInitials = (firstName, lastName) => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`;
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Image
-          source={require("../assets/Moghrabi.png")}
-          style={styles.profileImage}
-        />
+        <View style={styles.profileImageContainer}>
+          <Text style={styles.profileInitials}>
+            {getInitials(userData.firstName, userData.lastName)}
+          </Text>
+        </View>
         <Text
           style={styles.name}
         >{`${userData.firstName} ${userData.lastName}`}</Text>
@@ -116,11 +120,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 40,
   },
-  profileImage: {
+  profileImageContainer: {
     width: 150,
     height: 150,
     borderRadius: 75,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 20,
+  },
+  profileInitials: {
+    fontSize: 64,
+    fontWeight: "bold",
+    color: "#004051",
   },
   name: {
     fontSize: 32,

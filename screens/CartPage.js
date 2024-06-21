@@ -190,14 +190,15 @@ const CartPage = () => {
       <Text>Start Date: {new Date(item.startDate).toLocaleDateString()}</Text>
       <Text>End Date: {new Date(item.endDate).toLocaleDateString()}</Text>
       <Text>Price: ${item.price.toFixed(2)} per night</Text>
-      <Text>Number of nights: {item.numberOfDays}</Text>
-      <Text>Total Price: ${item.totalPrice.toFixed(2)}</Text>
       {item.discount > 0 && <Text>Discount: {item.discount}%</Text>}
       {item.discount > 0 && (
         <Text>
           Price After Discount: ${item.discountedPrice.toFixed(2)} per night
         </Text>
       )}
+      <Text>Number of nights: {item.numberOfDays}</Text>
+
+      <Text>Total Price: ${item.totalPrice.toFixed(2)}</Text>
       <View style={styles.buttonsContainer}>
         <TouchableOpacity
           style={styles.removeButton}

@@ -5,14 +5,21 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import getUri from "../getUrl";
+import { Image } from "react-native";
+import ImageViewer from "react-native-image-zoom-viewer";
 
 const CartPage = () => {
   const [cartItems, setCartItems] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [isImageViewerVisible, setImageViewerVisible] = useState(false);
+  const [imageUrls, setImageUrls] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -40,7 +47,6 @@ const CartPage = () => {
           const data = await response.json();
           const detailedCartItems = await Promise.all(
             data.map(async (item) => {
-              // Fetch room details
               const roomResponse = await fetch(
                 `https://${getUri()}${
                   item.links.find((link) => link.rel === "rooms").href
@@ -61,11 +67,8 @@ const CartPage = () => {
               const roomData = await roomResponse.json();
               const room = roomData.rooms[0];
 
-              // Fetch room type
               const roomTypeResponse = await fetch(
-                `https://${getUri()}${
-                  room.links.find((link) => link.rel === "room type").href
-                }`,
+                `https://${getUri()}/api/room/roomType/${room.roomId}`,
                 {
                   method: "GET",
                   headers: {
@@ -81,7 +84,6 @@ const CartPage = () => {
 
               const roomTypeData = await roomTypeResponse.json();
 
-              // Fetch hotel details
               const hotelResponse = await fetch(
                 `https://${getUri()}${
                   room.links.find((link) => link.rel === "hotel").href
@@ -102,6 +104,9 @@ const CartPage = () => {
               const hotelData = await hotelResponse.json();
               const hotel = hotelData.hotels[0];
 
+              const roomImages = await fetchRoomImages(room.roomId);
+              const roomImage = roomImages.length > 0 ? roomImages[0] : null;
+
               const startDate = new Date(item.startDate);
               const endDate = new Date(item.endDate);
               const numberOfDays =
@@ -119,6 +124,7 @@ const CartPage = () => {
                 numberOfDays,
                 totalPrice: discountedPrice * numberOfDays,
                 discountedPrice,
+                roomImages,
               };
             })
           );
@@ -143,6 +149,34 @@ const CartPage = () => {
     setTotalPrice(total);
   };
 
+  const fetchRoomImages = async (roomId) => {
+    try {
+      const response = await fetch(
+        `https://${getUri()}/api/room/${roomId}/roomImage`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.roomImages.map((image) => {
+          const filename = image.imageBath.split("/").pop();
+          return `http://localhost:3000/images/${filename}`;
+        });
+      } else {
+        console.error(`Failed to retrieve images for room ${roomId}`);
+        return [];
+      }
+    } catch (error) {
+      console.error(`Error fetching images for room ${roomId}:`, error);
+      return [];
+    }
+  };
+
   const handleRemoveItem = async (cartItemId) => {
     try {
       const userId = await AsyncStorage.getItem("userId");
@@ -164,7 +198,6 @@ const CartPage = () => {
       );
 
       if (response.ok) {
-        // Remove item from local state
         const updatedCartItems = cartItems.filter(
           (item) => item.cartItemId !== cartItemId
         );
@@ -182,24 +215,45 @@ const CartPage = () => {
     navigation.navigate("Payment", { cartItems });
   };
 
+  const handleImagePress = (images, index) => {
+    setImageUrls(images.map((url) => ({ url })));
+    setCurrentImageIndex(index);
+    setImageViewerVisible(true);
+  };
+
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItem}>
-      <Text style={styles.cartItemTitle}>
-        Hotel: {item.hotelName} - Room {item.roomNumber} - {item.roomType}
-      </Text>
-      <Text>Start Date: {new Date(item.startDate).toLocaleDateString()}</Text>
-      <Text>End Date: {new Date(item.endDate).toLocaleDateString()}</Text>
-      <Text>Price: ${item.price.toFixed(2)} per night</Text>
-      {item.discount > 0 && <Text>Discount: {item.discount}%</Text>}
-      {item.discount > 0 && (
-        <Text>
-          Price After Discount: ${item.discountedPrice.toFixed(2)} per night
-        </Text>
+      {item.roomImages && item.roomImages.length > 0 && (
+        <TouchableOpacity onPress={() => handleImagePress(item.roomImages, 0)}>
+          <Image
+            source={{ uri: item.roomImages[0] }}
+            style={styles.roomImage}
+          />
+        </TouchableOpacity>
       )}
+      <Text style={styles.cartItemTitle}>
+        Hotel: {item.hotelName} - Room {item.roomNumber} - {item.roomType}{" "}
+        {item.discount > 0 && (
+          <Text style={styles.discountText}>({item.discount}% off)</Text>
+        )}
+      </Text>
+      <Text>
+        From: {new Date(item.startDate).toLocaleDateString()} to{" "}
+        {new Date(item.endDate).toLocaleDateString()}
+      </Text>
+      <Text>
+        Price:{" "}
+        <Text style={styles.originalPrice}>${item.price.toFixed(2)}</Text>{" "}
+        <Text style={styles.discountedPrice}>
+          ${item.discountedPrice.toFixed(2)}
+        </Text>{" "}
+        per night
+      </Text>
       <Text>Number of nights: {item.numberOfDays}</Text>
-
-      <Text>Total Price: ${item.totalPrice.toFixed(2)}</Text>
-      <View style={styles.buttonsContainer}>
+      <View style={styles.footer}>
+        <Text style={styles.itemTotalPrice}>
+          Total Price: ${item.totalPrice.toFixed(2)}
+        </Text>
         <TouchableOpacity
           style={styles.removeButton}
           onPress={() => handleRemoveItem(item.cartItemId)}
@@ -229,6 +283,14 @@ const CartPage = () => {
           </TouchableOpacity>
         </View>
       )}
+      <Modal visible={isImageViewerVisible} transparent={true}>
+        <ImageViewer
+          imageUrls={imageUrls}
+          index={currentImageIndex}
+          onSwipeDown={() => setImageViewerVisible(false)}
+          enableSwipeDown={true}
+        />
+      </Modal>
     </View>
   );
 };
@@ -237,60 +299,86 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "#f8f8f8",
   },
   cartContainer: {
     flex: 1,
-    width: "100%",
   },
   cartItem: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
+    marginBottom: 20,
     padding: 15,
-    marginVertical: 10,
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    shadowColor: "#004051",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#004051",
   },
   cartItemTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
-    marginBottom: 5,
+    marginBottom: 10,
+    color: "#004051",
   },
-  buttonsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
+  discountText: {
+    fontSize: 16,
+    color: "red",
   },
-  removeButton: {
-    backgroundColor: "#ff4d4d",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
+  originalPrice: {
+    textDecorationLine: "line-through",
+    color: "#555",
   },
-  removeButtonText: {
-    color: "#fff",
-    fontSize: 14,
+  discountedPrice: {
+    textDecorationLine: "underline",
+    color: "#004051",
+    fontWeight: "bold",
   },
   totalPrice: {
     fontSize: 20,
     fontWeight: "bold",
-    marginVertical: 10,
-    textAlign: "center",
+    marginTop: 10,
+    color: "#004051",
+    textAlign: "right",
   },
   button: {
     backgroundColor: "#004051",
-    padding: 10,
+    padding: 15,
     borderRadius: 8,
     alignItems: "center",
-    marginVertical: 20,
+    marginTop: 20,
   },
   buttonText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "bold",
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  removeButton: {
+    backgroundColor: "#dc3545",
+    padding: 10,
+    borderRadius: 8,
+  },
+  removeButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  roomImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  itemTotalPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#004051",
   },
 });
 

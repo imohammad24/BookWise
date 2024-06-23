@@ -14,6 +14,8 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import ImageViewer from "react-native-image-zoom-viewer";
+
 import getUri from "../getUrl";
 
 const FeaturedDeals = () => {
@@ -26,6 +28,10 @@ const FeaturedDeals = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [isImageViewerVisible, setImageViewerVisible] = useState(false);
+  const [imageUrls, setImageUrls] = useState([]);
+  const [imageIndex, setImageIndex] = useState(0);
+
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -74,10 +80,9 @@ const FeaturedDeals = () => {
               const roomData = await response.json();
               const room = roomData.rooms[0];
 
+              // Fetch room type using room ID instead of room type ID
               const roomTypeResponse = await fetch(
-                `https://${getUri()}${
-                  room.links.find((link) => link.rel === "room type").href
-                }`,
+                `https://${getUri()}/api/room/roomType/${room.roomId}`,
                 {
                   method: "GET",
                   headers: {
@@ -125,6 +130,12 @@ const FeaturedDeals = () => {
       fetchRoomDetails();
     }
   }, [deals]);
+
+  const handleImagePress = (images, index) => {
+    setImageUrls(images.map((url) => ({ url })));
+    setImageIndex(index);
+    setImageViewerVisible(true);
+  };
 
   const fetchRoomImages = async (roomId) => {
     try {
@@ -224,10 +235,18 @@ const FeaturedDeals = () => {
 
     return (
       <View style={styles.roomCard}>
-        <Image
-          source={{ uri: item.images[currentImageIndex[item.roomId] || 0] }}
-          style={styles.roomImage}
-        />
+        {item.images && item.images.length > 0 && (
+          <TouchableOpacity
+            onPress={() =>
+              handleImagePress(item.images, currentImageIndex[item.roomId] || 0)
+            }
+          >
+            <Image
+              source={{ uri: item.images[currentImageIndex[item.roomId] || 0] }}
+              style={styles.roomImage}
+            />
+          </TouchableOpacity>
+        )}
         <Text style={styles.hotelName}>{item.hotelName}</Text>
         <Text style={styles.roomNumber}>Room Number: {item.roomNumber}</Text>
         <Text style={styles.roomType}>Type: {item.roomType}</Text>
@@ -254,6 +273,14 @@ const FeaturedDeals = () => {
         renderItem={renderRoom}
         keyExtractor={(item) => item.featuredDealId}
       />
+      <Modal visible={isImageViewerVisible} transparent={true}>
+        <ImageViewer
+          imageUrls={imageUrls}
+          index={imageIndex}
+          onSwipeDown={() => setImageViewerVisible(false)}
+          enableSwipeDown={true}
+        />
+      </Modal>
       <Modal
         visible={isModalVisible}
         transparent={true}

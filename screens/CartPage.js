@@ -6,12 +6,15 @@ import {
   FlatList,
   TouchableOpacity,
   Modal,
+  Image,
+  Alert,
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import getUri from "../getUrl";
-import { Image } from "react-native";
 import ImageViewer from "react-native-image-zoom-viewer";
+import { Ionicons } from '@expo/vector-icons'; 
 
 const CartPage = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -221,48 +224,53 @@ const CartPage = () => {
     setImageViewerVisible(true);
   };
 
-  const renderCartItem = ({ item }) => (
-    <View style={styles.cartItem}>
-      {item.roomImages && item.roomImages.length > 0 && (
-        <TouchableOpacity onPress={() => handleImagePress(item.roomImages, 0)}>
-          <Image
-            source={{ uri: item.roomImages[0] }}
-            style={styles.roomImage}
-          />
-        </TouchableOpacity>
-      )}
-      <Text style={styles.cartItemTitle}>
-        Hotel: {item.hotelName} - Room {item.roomNumber} - {item.roomType}{" "}
-        {item.discount > 0 && (
-          <Text style={styles.discountText}>({item.discount}% off)</Text>
-        )}
-      </Text>
-      <Text>
-        From: {new Date(item.startDate).toLocaleDateString()} to{" "}
-        {new Date(item.endDate).toLocaleDateString()}
-      </Text>
-      <Text>
-        Price:{" "}
-        <Text style={styles.originalPrice}>${item.price.toFixed(2)}</Text>{" "}
-        <Text style={styles.discountedPrice}>
-          ${item.discountedPrice.toFixed(2)}
-        </Text>{" "}
-        per night
-      </Text>
-      <Text>Number of nights: {item.numberOfDays}</Text>
-      <View style={styles.footer}>
-        <Text style={styles.itemTotalPrice}>
-          Total Price: ${item.totalPrice.toFixed(2)}
-        </Text>
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={() => handleRemoveItem(item.cartItemId)}
-        >
-          <Text style={styles.removeButtonText}>Remove</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const onStartCardEntry = async () => {
+    const cardEntryConfig = {
+      collectPostalCode: false,
+    };
+    try {
+      await SQIPCardEntry.startCardEntryFlow(
+        cardEntryConfig,
+        onCardNonceRequestSuccess
+      );
+    } catch (ex) {
+      console.error("Error starting card entry:", ex.message);
+      SQIPCardEntry.showCardNonceProcessingError(ex.message);
+    }
+  };
+
+  const onCardNonceRequestSuccess = async (cardDetails) => {
+    try {
+      if (cardDetails && cardDetails.nonce !== '') {
+        console.log("Card Details:", cardDetails);
+        Alert.alert(JSON.stringify(cardDetails));
+        // Handle payment success here
+      }
+    } catch (ex) {
+      console.error("Error processing card nonce:", ex.message);
+      SQIPCardEntry.showCardNonceProcessingError(ex.message);
+    }
+  };
+
+  // Android specific configuration
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      SQIPCore.setSquareApplication('sandbox-sq0idb-5c6wtN3NfpzBM5XkGs-GIA');
+      SQIPCardEntry.setAndroidCardEntryTheme({
+        saveButtonFont: {
+          size: 25,
+        },
+        saveButtonTitle: 'Pay',
+        keyboardAppearance: 'Light',
+        saveButtonTextColor: {
+          r: 255,
+          g: 0,
+          b: 125,
+          a: 0.5,
+        }
+      });
+    }
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -273,7 +281,54 @@ const CartPage = () => {
           <FlatList
             data={cartItems}
             keyExtractor={(item) => item.cartItemId.toString()}
-            renderItem={renderCartItem}
+            renderItem={({ item }) => (
+              <View style={styles.cartItem}>
+                {item.roomImages && item.roomImages.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => handleImagePress(item.roomImages, 0)}
+                  >
+                    <Image
+                      source={{ uri: item.roomImages[0] }}
+                      style={styles.roomImage}
+                    />
+                  </TouchableOpacity>
+                )}
+                <Text style={styles.cartItemTitle}>
+                  Hotel: {item.hotelName} - Room {item.roomNumber} -{" "}
+                  {item.roomType}{" "}
+                  {item.discount > 0 && (
+                    <Text style={styles.discountText}>({item.discount}% off)</Text>
+                  )}
+                </Text>
+                <Text>
+                  From:{" "}
+                  {new Date(item.startDate).toLocaleDateString()} to{" "}
+                  {new Date(item.endDate).toLocaleDateString()}
+                </Text>
+                <Text>
+                  Price:{" "}
+                  <Text style={styles.originalPrice}>
+                    ${item.price.toFixed(2)}
+                  </Text>{" "}
+                  <Text style={styles.discountedPrice}>
+                    ${item.discountedPrice.toFixed(2)}
+                  </Text>{" "}
+                  per night
+                </Text>
+                <Text>Number of nights: {item.numberOfDays}</Text>
+                <View style={styles.footer}>
+                  <Text style={styles.itemTotalPrice}>
+                    Total Price: ${item.totalPrice.toFixed(2)}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => handleRemoveItem(item.cartItemId)}
+                  >
+                    <Ionicons name="trash-outline" size={24} color="#004051" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           />
           <Text style={styles.totalPrice}>
             Total Price: ${totalPrice.toFixed(2)}
@@ -361,13 +416,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   removeButton: {
-    backgroundColor: "#dc3545",
+    backgroundColor: "#FFFFFF",
     padding: 10,
     borderRadius: 8,
-  },
-  removeButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
   },
   roomImage: {
     width: "100%",

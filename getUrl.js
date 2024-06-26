@@ -1,3 +1,3 @@
 export default function getUri() {
-  return "localhost:7183";
+  return "192.168.1.15:7183";
 }

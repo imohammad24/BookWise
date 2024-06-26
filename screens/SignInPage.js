@@ -15,16 +15,21 @@ const SignInPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigation = useNavigation();
-
+ 
   const handleSignIn = async () => {
+    Alert.alert("asd");
+    console.log("asfs");
     try {
       const response = await fetch(`https://${getUri()}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept":"*/*"
         },
         body: JSON.stringify({ email, password }),
       });
+      Alert.alert(response);
+      console.log(response);
 
       if (response.ok) {
         const token = await response.text(); // Read the response as plain text
@@ -54,7 +59,7 @@ const SignInPage = () => {
         Alert.alert("Error", errorText || "Sign-in failed");
       }
     } catch (error) {
-      console.error("Error during sign-in:", error);
+      console.error("Error during sign-in:", error.response.data);
       Alert.alert("Error", `An unexpected error occurred: ${error.message}`);
     }
   };

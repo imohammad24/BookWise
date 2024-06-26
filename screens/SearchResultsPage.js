@@ -53,6 +53,8 @@ const SearchResultsPage = () => {
       queryParams.append("endDate", endDate.toISOString().split("T")[0]);
       if (searchCity || city) queryParams.append("city", searchCity || city);
 
+
+      console.log("search");
       const baseUrl = `https://${getUri()}/api/hotel`;
       const url = queryParams.toString()
         ? `${baseUrl}?${queryParams.toString()}`

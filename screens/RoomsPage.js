@@ -147,9 +147,11 @@ const RoomsPage = () => {
             const locationData = await fetchHotelLocation(initialHotel.hotelId);
             setLocation(locationData);
           } else {
+            
             console.error("Failed to fetch hotel details");
           }
         } catch (error) {
+          
           console.error("Error fetching hotel details:", error);
         }
       }

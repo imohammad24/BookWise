@@ -39,14 +39,16 @@ const HomePage = () => {
             const filename = city.cityImagePath.split("/").pop();
             return {
               name: city.cityName,
-              image: { uri: `http://localhost:3000/images/${filename}` },
+              image: { uri: `https://localhost:3000/images/${filename}` },
             };
           });
           setDestinations(formattedDestinations);
         } else {
+          Alert.alert("Failed to fetch most visited cities");
           console.error("Failed to fetch most visited cities");
         }
       } catch (error) {
+
         console.error("Error fetching most visited cities:", error);
       } finally {
         setLoadingDestinations(false);
@@ -291,16 +293,17 @@ const HomePage = () => {
       {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-          <Text style={styles.footerText}>Home</Text>
+        <Ionicons name="home-outline" size={24} color="#004051" />
+          
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("Cart")}>
-          <Text style={styles.footerText}>Cart</Text>
+        <Ionicons name="cart-outline" size={24} color="#004051" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
-          <Text style={styles.footerText}>Profile</Text>
+        <Ionicons name="person-outline" size={24} color="#004051" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("SearchResults")}>
-          <Text style={styles.footerText}>Search</Text>
+        <Ionicons name="search-outline" size={24} color="#004051" />
         </TouchableOpacity>
       </View>
     </View>

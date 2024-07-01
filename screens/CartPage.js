@@ -9,12 +9,13 @@ import {
   Image,
   Alert,
   Platform,
+  ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import getUri from "../getUrl";
 import ImageViewer from "react-native-image-zoom-viewer";
-import { Ionicons } from '@expo/vector-icons'; 
+import { Ionicons } from "@expo/vector-icons";
 
 const CartPage = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -36,7 +37,7 @@ const CartPage = () => {
         }
 
         const response = await fetch(
-          `https://${getUri()}/api/user/${userId}/Cart`,
+          `http://${getUri()}/api/user/${userId}/Cart`,
           {
             method: "GET",
             headers: {
@@ -51,7 +52,7 @@ const CartPage = () => {
           const detailedCartItems = await Promise.all(
             data.map(async (item) => {
               const roomResponse = await fetch(
-                `https://${getUri()}${
+                `http://${getUri()}${
                   item.links.find((link) => link.rel === "rooms").href
                 }`,
                 {
@@ -71,7 +72,7 @@ const CartPage = () => {
               const room = roomData.rooms[0];
 
               const roomTypeResponse = await fetch(
-                `https://${getUri()}/api/room/roomType/${room.roomId}`,
+                `http://${getUri()}/api/room/roomType/${room.roomId}`,
                 {
                   method: "GET",
                   headers: {
@@ -88,7 +89,7 @@ const CartPage = () => {
               const roomTypeData = await roomTypeResponse.json();
 
               const hotelResponse = await fetch(
-                `https://${getUri()}${
+                `http://${getUri()}${
                   room.links.find((link) => link.rel === "hotel").href
                 }`,
                 {
@@ -135,10 +136,10 @@ const CartPage = () => {
           setCartItems(detailedCartItems);
           calculateTotalPrice(detailedCartItems);
         } else {
-          console.error("Failed to fetch cart items");
+          //..console.error("Failed to fetch cart items");
         }
       } catch (error) {
-        console.error("Error fetching cart items:", error);
+        //..console.error("Error fetching cart items:", error);
       }
     };
 
@@ -155,7 +156,7 @@ const CartPage = () => {
   const fetchRoomImages = async (roomId) => {
     try {
       const response = await fetch(
-        `https://${getUri()}/api/room/${roomId}/roomImage`,
+        `http://${getUri()}/api/room/${roomId}/roomImage`,
         {
           method: "GET",
           headers: {
@@ -168,14 +169,14 @@ const CartPage = () => {
         const data = await response.json();
         return data.roomImages.map((image) => {
           const filename = image.imageBath.split("/").pop();
-          return `http://localhost:3000/images/${filename}`;
+          return `http://${getUri()}/images/${filename}`;
         });
       } else {
-        console.error(`Failed to retrieve images for room ${roomId}`);
+        //..console.error(`Failed to retrieve images for room ${roomId}`);
         return [];
       }
     } catch (error) {
-      console.error(`Error fetching images for room ${roomId}:`, error);
+      //..console.error(`Error fetching images for room ${roomId}:`, error);
       return [];
     }
   };
@@ -190,7 +191,7 @@ const CartPage = () => {
       }
 
       const response = await fetch(
-        `https://${getUri()}/api/user/${userId}/Cart/${cartItemId}`,
+        `http://${getUri()}/api/user/${userId}/Cart/${cartItemId}`,
         {
           method: "DELETE",
           headers: {
@@ -207,10 +208,10 @@ const CartPage = () => {
         setCartItems(updatedCartItems);
         calculateTotalPrice(updatedCartItems);
       } else {
-        console.error("Failed to remove item from cart");
+        //..console.error("Failed to remove item from cart");
       }
     } catch (error) {
-      console.error("Error removing item from cart:", error);
+      //..console.error("Error removing item from cart:", error);
     }
   };
 
@@ -234,119 +235,135 @@ const CartPage = () => {
         onCardNonceRequestSuccess
       );
     } catch (ex) {
-      console.error("Error starting card entry:", ex.message);
+      //..console.error("Error starting card entry:", ex.message);
       SQIPCardEntry.showCardNonceProcessingError(ex.message);
     }
   };
 
   const onCardNonceRequestSuccess = async (cardDetails) => {
     try {
-      if (cardDetails && cardDetails.nonce !== '') {
-        console.log("Card Details:", cardDetails);
+      if (cardDetails && cardDetails.nonce !== "") {
+        //..console.log("Card Details:", cardDetails);
         Alert.alert(JSON.stringify(cardDetails));
         // Handle payment success here
       }
     } catch (ex) {
-      console.error("Error processing card nonce:", ex.message);
+      //..console.error("Error processing card nonce:", ex.message);
       SQIPCardEntry.showCardNonceProcessingError(ex.message);
     }
   };
 
   // Android specific configuration
-  useEffect(() => {
+  /*useEffect(() => {
     if (Platform.OS === "android") {
-      SQIPCore.setSquareApplication('sandbox-sq0idb-5c6wtN3NfpzBM5XkGs-GIA');
+      //SQIPCore.setSquareApplication("sandbox-sq0idb-5c6wtN3NfpzBM5XkGs-GIA");
       SQIPCardEntry.setAndroidCardEntryTheme({
         saveButtonFont: {
           size: 25,
         },
-        saveButtonTitle: 'Pay',
-        keyboardAppearance: 'Light',
+        saveButtonTitle: "Pay",
+        keyboardAppearance: "Light",
         saveButtonTextColor: {
           r: 255,
           g: 0,
           b: 125,
           a: 0.5,
-        }
+        },
       });
     }
-  }, []);
+  }, []);*/
 
   return (
-    <View style={styles.container}>
-      {cartItems.length === 0 ? (
-        <Text>Your cart is empty.</Text>
-      ) : (
-        <View style={styles.cartContainer}>
-          <FlatList
-            data={cartItems}
-            keyExtractor={(item) => item.cartItemId.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.cartItem}>
-                {item.roomImages && item.roomImages.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => handleImagePress(item.roomImages, 0)}
-                  >
-                    <Image
-                      source={{ uri: item.roomImages[0] }}
-                      style={styles.roomImage}
-                    />
-                  </TouchableOpacity>
-                )}
-                <Text style={styles.cartItemTitle}>
-                  Hotel: {item.hotelName} - Room {item.roomNumber} -{" "}
-                  {item.roomType}{" "}
-                  {item.discount > 0 && (
-                    <Text style={styles.discountText}>({item.discount}% off)</Text>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        {cartItems.length === 0 ? (
+          <Text style={styles.emptyCartText}>Your cart is empty.</Text>
+        ) : (
+          <View style={styles.cartContainer}>
+            <FlatList
+              data={cartItems}
+              keyExtractor={(item) => item.cartItemId.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.cartItem}>
+                  {item.roomImages && item.roomImages.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => handleImagePress(item.roomImages, 0)}
+                    >
+                      <Image
+                        source={{ uri: item.roomImages[0] }}
+                        style={styles.roomImage}
+                      />
+                    </TouchableOpacity>
                   )}
-                </Text>
-                <Text>
-                  From:{" "}
-                  {new Date(item.startDate).toLocaleDateString()} to{" "}
-                  {new Date(item.endDate).toLocaleDateString()}
-                </Text>
-                <Text>
-                  Price:{" "}
-                  <Text style={styles.originalPrice}>
-                    ${item.price.toFixed(2)}
-                  </Text>{" "}
-                  <Text style={styles.discountedPrice}>
-                    ${item.discountedPrice.toFixed(2)}
-                  </Text>{" "}
-                  per night
-                </Text>
-                <Text>Number of nights: {item.numberOfDays}</Text>
-                <View style={styles.footer}>
-                  <Text style={styles.itemTotalPrice}>
-                    Total Price: ${item.totalPrice.toFixed(2)}
+                  <Text style={styles.cartItemTitle}>
+                    Hotel: {item.hotelName} - Room {item.roomNumber} -{" "}
+                    {item.roomType}{" "}
+                    {item.discount > 0 && (
+                      <Text style={styles.discountText}>
+                        ({item.discount}% off)
+                      </Text>
+                    )}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => handleRemoveItem(item.cartItemId)}
-                  >
-                    <Ionicons name="trash-outline" size={24} color="#004051" />
-                  </TouchableOpacity>
+                  <Text>
+                    From: {new Date(item.startDate).toLocaleDateString()} to{" "}
+                    {new Date(item.endDate).toLocaleDateString()}
+                  </Text>
+                  <Text>
+                    Price:{" "}
+                    {item.discount > 0 ? (
+                      <>
+                        <Text style={styles.originalPrice}>
+                          ${item.price.toFixed(2)}
+                        </Text>{" "}
+                        <Text style={styles.discountedPrice}>
+                          ${item.discountedPrice.toFixed(2)}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.discountedPrice}>
+                        ${item.price.toFixed(2)}
+                      </Text>
+                    )}{" "}
+                    per night
+                  </Text>
+                  <Text>Number of nights: {item.numberOfDays}</Text>
+                  <View style={styles.footer}>
+                    <Text style={styles.itemTotalPrice}>
+                      Total Price: ${item.totalPrice.toFixed(2)}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => handleRemoveItem(item.cartItemId)}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={24}
+                        color="#004051"
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
+            />
+
+            <Text style={styles.totalPrice}>
+              Total Price: ${totalPrice.toFixed(2)}
+            </Text>
+            <TouchableOpacity style={styles.button} onPress={handlePayAll}>
+              <Text style={styles.buttonText}>Pay All</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        <Modal visible={isImageViewerVisible} transparent={true}>
+          <ImageViewer
+            imageUrls={imageUrls}
+            index={currentImageIndex}
+            onSwipeDown={() => setImageViewerVisible(false)}
+            enableSwipeDown={true}
           />
-          <Text style={styles.totalPrice}>
-            Total Price: ${totalPrice.toFixed(2)}
-          </Text>
-          <TouchableOpacity style={styles.button} onPress={handlePayAll}>
-            <Text style={styles.buttonText}>Pay All</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      <Modal visible={isImageViewerVisible} transparent={true}>
-        <ImageViewer
-          imageUrls={imageUrls}
-          index={currentImageIndex}
-          onSwipeDown={() => setImageViewerVisible(false)}
-          enableSwipeDown={true}
-        />
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -355,6 +372,11 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: "#f8f8f8",
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    height: 0,
+    //padding: 20,
   },
   cartContainer: {
     flex: 1,
@@ -429,6 +451,13 @@ const styles = StyleSheet.create({
   itemTotalPrice: {
     fontSize: 16,
     fontWeight: "bold",
+    color: "#004051",
+  },
+  emptyCartText: {
+    flex: 1,
+    textAlign: "center",
+    textAlignVertical: "center",
+    fontSize: 20, // Adjust the size as needed
     color: "#004051",
   },
 });

@@ -23,7 +23,7 @@ const ForgetPasswordPage = () => {
   const handleSendCode = async () => {
     try {
       const response = await fetch(
-        `https://${getUri()}/api/users/ForgetPasswordDto`,
+        `http://${getUri()}/api/users/ForgetPasswordCode`,
         {
           method: "POST",
           headers: {
@@ -40,7 +40,7 @@ const ForgetPasswordPage = () => {
         Alert.alert("Error", "Failed to send verification code");
       }
     } catch (error) {
-      console.error("Error sending code:", error);
+      //..console.error("Error sending code:", error);
       Alert.alert("Error", `An unexpected error occurred: ${error.message}`);
     }
   };
@@ -48,7 +48,7 @@ const ForgetPasswordPage = () => {
   const handleVerifyCode = async () => {
     try {
       const response = await fetch(
-        `https://${getUri()}/api/users/checkCode/${code}`,
+        `http://${getUri()}/api/users/checkCode/${code}`,
         {
           method: "POST",
           headers: {
@@ -62,7 +62,7 @@ const ForgetPasswordPage = () => {
         await AsyncStorage.setItem("authToken", token);
 
         const userResponse = await fetch(
-          `https://${getUri()}/api/users?email=${email}`,
+          `http://${getUri()}/api/users?email=${email}`,
           {
             method: "GET",
             headers: {
@@ -87,7 +87,7 @@ const ForgetPasswordPage = () => {
         Alert.alert("Error", "Invalid verification code");
       }
     } catch (error) {
-      console.error("Error verifying code:", error);
+      //..console.error("Error verifying code:", error);
       Alert.alert("Error", `An unexpected error occurred: ${error.message}`);
     }
   };
@@ -101,7 +101,7 @@ const ForgetPasswordPage = () => {
     try {
       const token = await AsyncStorage.getItem("authToken");
 
-      const response = await fetch(`https://${getUri()}/api/users/${userId}`, {
+      const response = await fetch(`http://${getUri()}/api/users/${userId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -119,7 +119,7 @@ const ForgetPasswordPage = () => {
         Alert.alert("Error", "Failed to reset password");
       }
     } catch (error) {
-      console.error("Error resetting password:", error);
+      //..console.error("Error resetting password:", error);
       Alert.alert("Error", `An unexpected error occurred: ${error.message}`);
     }
   };

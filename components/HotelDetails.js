@@ -11,7 +11,9 @@ const HotelDetails = ({ hotel, imagePath, amenities, location }) => {
           <Text>No Image Available</Text>
         </View>
       )}
-      <Text style={styles.hotelName}>{hotel.hotelName}</Text>
+      <Text style={styles.hotelName}>
+        {hotel.hotelName} - {hotel.type} {/* Updated this line */}
+      </Text>
       <Text style={styles.hotelDescription}>{hotel.hotelDescription}</Text>
       <View style={styles.ratingContainer}>
         {[...Array(5)].map((_, index) => (

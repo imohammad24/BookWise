@@ -31,7 +31,7 @@ const HomePage = () => {
     const fetchMostVisitedCities = async () => {
       try {
         const response = await fetch(
-          `https://${getUri()}/api/location/cities/mostVisited`
+          `http://${getUri()}/api/location/cities/mostVisited`
         );
         if (response.ok) {
           const data = await response.json();
@@ -39,17 +39,16 @@ const HomePage = () => {
             const filename = city.cityImagePath.split("/").pop();
             return {
               name: city.cityName,
-              image: { uri: `https://localhost:3000/images/${filename}` },
+              image: { uri: `http://${getUri()}/images/${filename}` },
             };
           });
           setDestinations(formattedDestinations);
         } else {
           Alert.alert("Failed to fetch most visited cities");
-          console.error("Failed to fetch most visited cities");
+          ////..console.error("Failed to fetch most visited cities");
         }
       } catch (error) {
-
-        console.error("Error fetching most visited cities:", error);
+        ////..console.error("Error fetching most visited cities:", error);
       } finally {
         setLoadingDestinations(false);
       }
@@ -73,7 +72,7 @@ const HomePage = () => {
         const userId = await AsyncStorage.getItem("userId");
         if (userId) {
           const response = await fetch(
-            `https://${getUri()}/api/hotel/user/${userId}`
+            `http://${getUri()}/api/hotel/user/${userId}`
           );
           if (response.ok) {
             const data = await response.json();
@@ -90,18 +89,18 @@ const HomePage = () => {
               setLatestVisitedHotel("No hotels visited");
             }
           } else {
-            console.error("Failed to fetch latest visited hotel");
+            ////..console.error("Failed to fetch latest visited hotel");
           }
         }
       } catch (error) {
-        console.error("Error fetching latest visited hotel:", error);
+        ////..console.error("Error fetching latest visited hotel:", error);
       }
     };
 
     const fetchHotelImagePath = async (hotelId) => {
       try {
         const response = await fetch(
-          `https://${getUri()}/api/hotel/${hotelId}/hotelImage`,
+          `http://${getUri()}/api/hotel/${hotelId}/hotelImage`,
           {
             method: "GET",
             headers: {
@@ -113,13 +112,13 @@ const HomePage = () => {
         if (response.ok) {
           const data = await response.json();
           const filename = data.imagePath.split("/").pop();
-          return `http://localhost:3000/images/${filename}`;
+          return `http://${getUri()}/images/${filename}`;
         } else {
-          console.error(`Failed to retrieve image for hotel ${hotelId}`);
+          ////..console.error(`Failed to retrieve image for hotel ${hotelId}`);
           return null;
         }
       } catch (error) {
-        console.error(`Error fetching image for hotel ${hotelId}:`, error);
+        ////..console.error(`Error fetching image for hotel ${hotelId}:`, error);
         return null;
       }
     };
@@ -131,7 +130,7 @@ const HomePage = () => {
       if (authToken && userId) {
         try {
           const response = await fetch(
-            `https://${getUri()}/api/users?userId=${userId}`,
+            `http://${getUri()}/api/users?userId=${userId}`,
             {
               headers: {
                 Authorization: `Bearer ${authToken}`,
@@ -144,24 +143,58 @@ const HomePage = () => {
             fetchLatestVisitedHotel();
           }
         } catch (error) {
-          console.error("Error fetching user data:", error);
+          ////..console.error("Error fetching user data:", error);
           Alert.alert("Error", "Failed to load user data");
         }
       }
     };
 
+    const unsubscribe = navigation.addListener("focus", () => {
+      checkUserSignedIn();
+    });
+
     checkUserSignedIn();
-  }, []);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [navigation]);
+
+  const checkUserSignedIn = async () => {
+    const authToken = await AsyncStorage.getItem("authToken");
+    const userId = await AsyncStorage.getItem("userId");
+
+    if (authToken && userId) {
+      try {
+        const response = await fetch(
+          `http://${getUri()}/api/users?userId=${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+        const data = await response.json();
+        if (data.length > 0) {
+          setUserData(data[0]); // assuming the response is an array with a single user object
+          fetchLatestVisitedHotel();
+        }
+      } catch (error) {
+        ////..console.error("Error fetching user data:", error);
+        Alert.alert("Error", "Failed to load user data");
+      }
+    }
+  };
 
   const fetchFeaturedDeals = async () => {
     try {
-      const response = await fetch(`https://${getUri()}/api/room/featuredDeal`);
+      const response = await fetch(`http://${getUri()}/api/room/featuredDeal`);
       if (response.ok) {
         const featuredDeals = await response.json();
         const roomDetails = await Promise.all(
           featuredDeals.map(async (deal) => {
             const roomResponse = await fetch(
-              `https://${getUri()}/api/room?roomId=${deal.roomId}`
+              `http://${getUri()}/api/room?roomId=${deal.roomId}`
             );
             if (roomResponse.ok) {
               const roomData = await roomResponse.json();
@@ -175,11 +208,11 @@ const HomePage = () => {
         );
         return roomDetails;
       } else {
-        console.error("Failed to fetch featured deals");
+        ////..console.error("Failed to fetch featured deals");
         return [];
       }
     } catch (error) {
-      console.error("Error fetching featured deals:", error);
+      ////..console.error("Error fetching featured deals:", error);
       return [];
     }
   };
@@ -258,52 +291,55 @@ const HomePage = () => {
         </View>
 
         {/* Latest Visited Hotel */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Latest Visited Hotel</Text>
-          <Text style={styles.sectionSubtitle}>Recently visited by you</Text>
-          {latestVisitedHotel ? (
-            latestVisitedHotel === "No hotels visited" ? (
-              <Text style={styles.noHotelText}>
-                You have not visited any hotel before, make your first visit.
-              </Text>
+        {userData ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Latest Visited Hotel</Text>
+            <Text style={styles.sectionSubtitle}>Recently visited by you</Text>
+            {latestVisitedHotel ? (
+              latestVisitedHotel === "No hotels visited" ? (
+                <Text style={styles.noHotelText}>
+                  You have not visited any hotel before, make your first visit.
+                </Text>
+              ) : (
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("Rooms", { hotel: latestVisitedHotel })
+                  }
+                >
+                  <Image
+                    source={latestVisitedHotel.image}
+                    style={styles.destinationImage}
+                  />
+                  <Text style={styles.destinationText}>
+                    {latestVisitedHotel.name}
+                  </Text>
+                  <Text style={styles.hotelDescription}>
+                    {latestVisitedHotel.description}
+                  </Text>
+                </TouchableOpacity>
+              )
             ) : (
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("Rooms", { hotel: latestVisitedHotel })
-                }
-              >
-                <Image
-                  source={latestVisitedHotel.image}
-                  style={styles.destinationImage}
-                />
-                <Text style={styles.destinationText}>
-                  {latestVisitedHotel.name}
-                </Text>
-                <Text style={styles.hotelDescription}>
-                  {latestVisitedHotel.description}
-                </Text>
-              </TouchableOpacity>
-            )
-          ) : (
-            <Text>Loading...</Text>
-          )}
-        </View>
+              <Text>Loading...</Text>
+            )}
+          </View>
+        ) : (
+          <Text></Text>
+        )}
       </ScrollView>
 
       {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity onPress={() => navigation.navigate("Home")}>
-        <Ionicons name="home-outline" size={24} color="#004051" />
-          
+          <Ionicons name="home-outline" size={24} color="#004051" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("Cart")}>
-        <Ionicons name="cart-outline" size={24} color="#004051" />
+          <Ionicons name="cart-outline" size={24} color="#004051" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("Profile")}>
-        <Ionicons name="person-outline" size={24} color="#004051" />
+          <Ionicons name="person-outline" size={24} color="#004051" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("SearchResults")}>
-        <Ionicons name="search-outline" size={24} color="#004051" />
+          <Ionicons name="search-outline" size={24} color="#004051" />
         </TouchableOpacity>
       </View>
     </View>
@@ -316,6 +352,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   scrollContainer: {
+    flexGrow: 1,
+    //height: 0,
     padding: 20,
   },
   header: {

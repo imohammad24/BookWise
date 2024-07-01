@@ -59,13 +59,19 @@ const RoomList = ({ rooms, onAddToCart }) => {
           Capacity: {capacity} {capacity > 1 ? "persons" : "person"}
         </Text>
         <View style={styles.row}>
-          <Text style={[styles.info, styles.crossedOut]}>
-            ${price.toFixed(2)}
-          </Text>
-          {discount > 0 && (
+          {discount > 0 ? (
+            <>
+              <Text style={[styles.info, styles.crossedOut]}>
+                ${price.toFixed(2)}
+              </Text>
+              <Text style={[styles.info, styles.underlined]}>
+                {" "}
+                ${discountedPrice.toFixed(2)}
+              </Text>
+            </>
+          ) : (
             <Text style={[styles.info, styles.underlined]}>
-              {" "}
-              ${discountedPrice.toFixed(2)}
+              ${price.toFixed(2)}
             </Text>
           )}
         </View>

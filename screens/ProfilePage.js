@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
 import getUri from "../getUrl";
 
 const ProfilePage = () => {
@@ -28,7 +28,7 @@ const ProfilePage = () => {
 
       try {
         const response = await fetch(
-          `https://${getUri()}/api/users?userId=${userId}`,
+          `http://${getUri()}/api/users?userId=${userId}`,
           {
             headers: {
               Authorization: `Bearer ${authToken}`,
@@ -43,7 +43,7 @@ const ProfilePage = () => {
         }
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        //..console.error("Error fetching user data:", error);
         Alert.alert("Error", "Failed to load user data");
         setLoading(false);
       }
@@ -55,7 +55,13 @@ const ProfilePage = () => {
   const handleLogout = async () => {
     await AsyncStorage.removeItem("authToken");
     await AsyncStorage.removeItem("userId");
-    navigation.navigate("SignIn");
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      })
+    );
   };
 
   if (loading) {

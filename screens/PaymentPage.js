@@ -1,21 +1,27 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Button, Alert } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import getUri from "../getUrl";
 
 const CardForm = () => {
-  const [cardNumber, setCardNumber] = useState('');
-  const [expirationDate, setExpirationDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardHolderName, setCardHolderName] = useState('');
+  const [cardNumber, setCardNumber] = useState("");
+  const [expirationDate, setExpirationDate] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [cardHolderName, setCardHolderName] = useState("");
 
   const handleSubmit = async () => {
     if (!cardNumber || !expirationDate || !cvv || !cardHolderName) {
-      Alert.alert('Invalid Input', 'Please fill in all fields.');
-      console.log('Invalid Input', 'Please fill in all fields.');
+      Alert.alert("Invalid Input", "Please fill in all fields.");
       return;
     }
 
-    
     try {
       const userId = await AsyncStorage.getItem("userId");
       if (!userId) {
@@ -27,9 +33,8 @@ const CardForm = () => {
         throw new Error("No auth token found");
       }
 
-
       const response = await fetch(
-        `https://localhost:7183/api/booking/user/${userId}/cart`,
+        `http://${getUri()}/api/booking/user/${userId}/cart`,
         {
           method: "POST",
           headers: {
@@ -37,41 +42,35 @@ const CardForm = () => {
             Authorization: `Bearer ${authToken}`,
           },
           body: JSON.stringify({
-            cardDetailsToken:"cnon:card-nonce-ok",
-            idempotencyKey:"a26b7cc8-6811-4182-bec4-48160c79eb8a"
-          }
-            
-          ),
+            cardDetailsToken: "cnon:card-nonce-ok",
+            idempotencyKey: "a26b7cc8-6811-4182-bec4-48160c79eb8a",
+          }),
         }
       );
-      
 
       if (response.ok) {
-        
-        Alert.alert("Success", "Room added to cart successfully!");
+        Alert.alert("Success", "Room booked successfully!");
       } else {
-        console.error("Failed to add room to cart");
-        Alert.alert("Error", "Failed to add room to cart");
+        //..console.error("Failed to add room to cart");
+        console.error("Failed to book the room");
+        Alert.alert("Error", "Failed to book the room");
       }
     } catch (error) {
-      console.error("Error adding item to cart:", error);
-      Alert.alert("Error", "Failed to add room to cart");
+      //..console.error("Error adding item to cart:", error);
+      console.error("Failed to book the room", error);
+      Alert.alert("Error", "Failed to book the room");
     }
 
-    Alert.alert(
-      'Card Details',
-      `Card Number: ${cardNumber}\nExpiration Date: ${expirationDate}\nCVV: ${cvv}\nCard Holder Name: ${cardHolderName}`
-    );
-
-    // Optionally, clear form fields after submission
-    setCardNumber('');
-    setExpirationDate('');
-    setCvv('');
-    setCardHolderName('');
+    setCardNumber("");
+    setExpirationDate("");
+    setCvv("");
+    setCardHolderName("");
   };
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>Payment Information</Text>
+
       <Text style={styles.label}>Card Number</Text>
       <TextInput
         style={styles.input}
@@ -80,6 +79,7 @@ const CardForm = () => {
         keyboardType="numeric"
         placeholder="1234 5678 9012 3456"
       />
+
       <Text style={styles.label}>Expiration Date</Text>
       <TextInput
         style={styles.input}
@@ -88,6 +88,7 @@ const CardForm = () => {
         placeholder="MM/YY"
         keyboardType="numeric"
       />
+
       <Text style={styles.label}>CVV</Text>
       <TextInput
         style={styles.input}
@@ -97,6 +98,7 @@ const CardForm = () => {
         placeholder="123"
         secureTextEntry={true}
       />
+
       <Text style={styles.label}>Card Holder Name</Text>
       <TextInput
         style={styles.input}
@@ -104,7 +106,10 @@ const CardForm = () => {
         onChangeText={setCardHolderName}
         placeholder="John Doe"
       />
-      <Button title="Submit" onPress={handleSubmit} />
+
+      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+        <Text style={styles.buttonText}>Submit</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -112,20 +117,40 @@ const CardForm = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: "center",
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#004051",
+    textAlign: "center",
+    marginBottom: 20,
   },
   label: {
-    marginTop: 15,
     fontSize: 18,
+    color: "#004051",
+    marginBottom: 5,
   },
   input: {
     height: 40,
-    borderColor: 'gray',
+    borderColor: "#ddd",
     borderWidth: 1,
-    marginTop: 5,
+    borderRadius: 8,
     paddingHorizontal: 10,
-    fontSize: 18,
+    marginBottom: 15,
+    backgroundColor: "#f0f0f0",
+  },
+  button: {
+    backgroundColor: "#004051",
+    padding: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
   },
 });
 

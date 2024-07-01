@@ -10,6 +10,7 @@ import {
   Button,
   Platform,
   Alert,
+  ScrollView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -38,7 +39,7 @@ const FeaturedDeals = () => {
     const fetchFeaturedDeals = async () => {
       try {
         const response = await fetch(
-          `https://${getUri()}/api/room/featuredDeal`,
+          `http://${getUri()}/api/room/featuredDeal`,
           {
             method: "GET",
             headers: {
@@ -67,7 +68,7 @@ const FeaturedDeals = () => {
         const roomsData = await Promise.all(
           deals.map(async (deal) => {
             const response = await fetch(
-              `https://${getUri()}/api/room?roomId=${deal.roomId}`,
+              `http://${getUri()}/api/room?roomId=${deal.roomId}`,
               {
                 method: "GET",
                 headers: {
@@ -82,7 +83,7 @@ const FeaturedDeals = () => {
 
               // Fetch room type using room ID instead of room type ID
               const roomTypeResponse = await fetch(
-                `https://${getUri()}/api/room/roomType/${room.roomId}`,
+                `http://${getUri()}/api/room/roomType/${room.roomId}`,
                 {
                   method: "GET",
                   headers: {
@@ -99,7 +100,7 @@ const FeaturedDeals = () => {
               room.images = roomImages;
 
               const hotelResponse = await fetch(
-                `https://${getUri()}/api/hotel?hotelId=${room.hotelId}`,
+                `http://${getUri()}/api/hotel?hotelId=${room.hotelId}`,
                 {
                   method: "GET",
                   headers: {
@@ -140,7 +141,7 @@ const FeaturedDeals = () => {
   const fetchRoomImages = async (roomId) => {
     try {
       const response = await fetch(
-        `https://${getUri()}/api/room/${roomId}/roomImage`,
+        `http://${getUri()}/api/room/${roomId}/roomImage`,
         {
           method: "GET",
           headers: {
@@ -153,7 +154,7 @@ const FeaturedDeals = () => {
         const data = await response.json();
         return data.roomImages.map((image) => {
           const filename = image.imageBath.split("/").pop();
-          return `http://localhost:3000/images/${filename}`;
+          return `http://${getUri()}/images/${filename}`;
         });
       } else {
         console.error(`Failed to retrieve images for room ${roomId}`);
@@ -206,7 +207,7 @@ const FeaturedDeals = () => {
       }
 
       const response = await fetch(
-        `https://${getUri()}/api/user/${userId}/Cart`,
+        `http://${getUri()}/api/user/${userId}/Cart`,
         {
           method: "POST",
           headers: {
@@ -247,15 +248,17 @@ const FeaturedDeals = () => {
             />
           </TouchableOpacity>
         )}
-        <Text style={styles.hotelName}>{item.hotelName}</Text>
+        <View style={styles.header}>
+          <Text style={styles.hotelName}>{item.hotelName}</Text>
+          <Text style={styles.discount}>Discount: {item.discount}%</Text>
+        </View>
         <Text style={styles.roomNumber}>Room Number: {item.roomNumber}</Text>
         <Text style={styles.roomType}>Type: {item.roomType}</Text>
         <Text style={styles.capacity}>Capacity: {item.capacity}</Text>
-        <Text style={styles.price}>Price: ${item.price.toFixed(2)}</Text>
-        <Text style={styles.discount}>Discount: {item.discount}%</Text>
-        <Text style={styles.finalPrice}>
-          Price after Discount: ${discountedPrice.toFixed(2)}
-        </Text>
+        <View style={styles.footer}>
+          <Text style={styles.originalPrice}>${item.price.toFixed(2)}</Text>
+          <Text style={styles.finalPrice}>${discountedPrice.toFixed(2)}</Text>
+        </View>
         <TouchableOpacity
           style={styles.addToCartButton}
           onPress={() => handleAddToCart(item)}
@@ -267,98 +270,100 @@ const FeaturedDeals = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={rooms}
-        renderItem={renderRoom}
-        keyExtractor={(item) => item.featuredDealId}
-      />
-      <Modal visible={isImageViewerVisible} transparent={true}>
-        <ImageViewer
-          imageUrls={imageUrls}
-          index={imageIndex}
-          onSwipeDown={() => setImageViewerVisible(false)}
-          enableSwipeDown={true}
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        <FlatList
+          data={rooms}
+          renderItem={renderRoom}
+          keyExtractor={(item) => item.featuredDealId}
         />
-      </Modal>
-      <Modal
-        visible={isModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Dates</Text>
-            {Platform.OS === "web" ? (
-              <>
-                <View style={styles.webDatePicker}>
-                  <Text style={styles.dateLabel}>Start Date</Text>
-                  <input
-                    type="date"
-                    value={startDate.toISOString().split("T")[0]}
-                    onChange={(e) => setStartDate(new Date(e.target.value))}
-                    style={styles.dateInput}
-                  />
-                </View>
-                <View style={styles.webDatePicker}>
-                  <Text style={styles.dateLabel}>End Date</Text>
-                  <input
-                    type="date"
-                    value={endDate.toISOString().split("T")[0]}
-                    onChange={(e) => setEndDate(new Date(e.target.value))}
-                    style={styles.dateInput}
-                  />
-                </View>
-              </>
-            ) : (
-              <>
-                <View style={styles.datePicker}>
-                  <Button
-                    onPress={() => setShowStartDatePicker(true)}
-                    title="Select Start Date"
-                  />
-                  {showStartDatePicker && (
-                    <DateTimePicker
-                      value={startDate}
-                      mode="date"
-                      display="default"
-                      onChange={handleStartDateChange}
+        <Modal visible={isImageViewerVisible} transparent={true}>
+          <ImageViewer
+            imageUrls={imageUrls}
+            index={imageIndex}
+            onSwipeDown={() => setImageViewerVisible(false)}
+            enableSwipeDown={true}
+          />
+        </Modal>
+        <Modal
+          visible={isModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Dates</Text>
+              {Platform.OS === "web" ? (
+                <>
+                  <View style={styles.webDatePicker}>
+                    <Text style={styles.dateLabel}>Start Date</Text>
+                    <input
+                      type="date"
+                      value={startDate.toISOString().split("T")[0]}
+                      onChange={(e) => setStartDate(new Date(e.target.value))}
+                      style={styles.dateInput}
                     />
-                  )}
-                </View>
-                <View style={styles.datePicker}>
-                  <Button
-                    onPress={() => setShowEndDatePicker(true)}
-                    title="Select End Date"
-                  />
-                  {showEndDatePicker && (
-                    <DateTimePicker
-                      value={endDate}
-                      mode="date"
-                      display="default"
-                      onChange={handleEndDateChange}
+                  </View>
+                  <View style={styles.webDatePicker}>
+                    <Text style={styles.dateLabel}>End Date</Text>
+                    <input
+                      type="date"
+                      value={endDate.toISOString().split("T")[0]}
+                      onChange={(e) => setEndDate(new Date(e.target.value))}
+                      style={styles.dateInput}
                     />
-                  )}
-                </View>
-              </>
-            )}
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleConfirmDates}
-            >
-              <Text style={styles.buttonText}>Submit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.datePicker}>
+                    <Button
+                      onPress={() => setShowStartDatePicker(true)}
+                      title="Select Start Date"
+                    />
+                    {showStartDatePicker && (
+                      <DateTimePicker
+                        value={startDate}
+                        mode="date"
+                        display="default"
+                        onChange={handleStartDateChange}
+                      />
+                    )}
+                  </View>
+                  <View style={styles.datePicker}>
+                    <Button
+                      onPress={() => setShowEndDatePicker(true)}
+                      title="Select End Date"
+                    />
+                    {showEndDatePicker && (
+                      <DateTimePicker
+                        value={endDate}
+                        mode="date"
+                        display="default"
+                        onChange={handleEndDateChange}
+                      />
+                    )}
+                  </View>
+                </>
+              )}
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleConfirmDates}
+              >
+                <Text style={styles.buttonText}>Submit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </ScrollView>
   );
 };
 
@@ -367,6 +372,10 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: "#fff",
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    height: 0,
   },
   roomCard: {
     borderWidth: 1,
@@ -382,10 +391,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
   hotelName: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 4,
   },
   roomNumber: {
     fontSize: 16,
@@ -401,8 +415,24 @@ const styles = StyleSheet.create({
   },
   discount: {
     fontSize: 16,
-    fontWeight: "bold",
+    color: "red",
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
     marginBottom: 8,
+  },
+  originalPrice: {
+    fontSize: 16,
+    color: "#555",
+    textDecorationLine: "line-through",
+  },
+  finalPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#004051",
   },
   addToCartButton: {
     backgroundColor: "#004051",
@@ -472,19 +502,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 16,
-  },
-  price: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  discount: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  finalPrice: {
-    fontSize: 16,
-    marginBottom: 8,
   },
 });
 

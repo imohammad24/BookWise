@@ -12,6 +12,7 @@ import PaymentPage from "./screens/PaymentPage";
 import RoomsPage from "./screens/RoomsPage";
 import ForgetPasswordPage from "./screens/ForgetPasswordPage";
 import FeaturedDeals from "./screens/FeaturedDeals";
+import ScrollView from "react-native";
 
 const Stack = createStackNavigator();
 

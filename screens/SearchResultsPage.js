@@ -7,7 +7,9 @@ import {
   StyleSheet,
   FlatList,
   Image,
+  Platform,
   Alert,
+  ScrollView,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -34,6 +36,32 @@ const SearchResultsPage = () => {
   const navigation = useNavigation();
   const route = useRoute();
 
+  const handleStartDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || startDate;
+    setShowStartDatePicker(Platform.OS === "ios");
+    setStartDate(currentDate);
+  };
+
+  const handleEndDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || endDate;
+    setShowEndDatePicker(Platform.OS === "ios");
+    setEndDate(currentDate);
+  };
+
+  // const handleStartDateChange = (event, selectedDate) => {
+  //   setShowStartDatePicker(Platform.OS === "ios");
+  //   if (selectedDate) {
+  //     setStartDate(selectedDate);
+  //   }
+  // };
+
+  // const handleEndDateChange = (event, selectedDate) => {
+  //   setShowEndDatePicker(Platform.OS === "ios");
+  //   if (selectedDate) {
+  //     setEndDate(selectedDate);
+  //   }
+  // };
+
   useEffect(() => {
     if (route.params?.city) {
       setCity(route.params.city);
@@ -53,13 +81,12 @@ const SearchResultsPage = () => {
       queryParams.append("endDate", endDate.toISOString().split("T")[0]);
       if (searchCity || city) queryParams.append("city", searchCity || city);
 
-
-      console.log("search");
-      const baseUrl = `https://${getUri()}/api/hotel`;
+      //..console.log("search");
+      const baseUrl = `http://${getUri()}/api/hotel`;
       const url = queryParams.toString()
         ? `${baseUrl}?${queryParams.toString()}`
         : baseUrl;
-
+      //..console.log(baseUrl);
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -67,6 +94,7 @@ const SearchResultsPage = () => {
         },
       });
 
+      //..console.log(response);
       if (response.ok) {
         const data = await response.json();
         setHotels(data.hotels);
@@ -75,7 +103,7 @@ const SearchResultsPage = () => {
         Alert.alert("Error", "Failed to retrieve hotels");
       }
     } catch (error) {
-      console.error("Error during search:", error);
+      //..console.error("Error during search:", error);
       Alert.alert("Error", `An unexpected error occurred: ${error.message}`);
     }
   };
@@ -95,7 +123,7 @@ const SearchResultsPage = () => {
   const fetchHotelImagePath = async (hotelId) => {
     try {
       const response = await fetch(
-        `https://${getUri()}/api/hotel/${hotelId}/hotelImage`,
+        `http://${getUri()}/api/hotel/${hotelId}/hotelImage`,
         {
           method: "GET",
           headers: {
@@ -111,13 +139,13 @@ const SearchResultsPage = () => {
         const filename = data.imagePath.split("/").pop(); // Get the last part after splitting by '/'
 
         // Construct the full URL to the local server
-        return `http://localhost:3000/images/${filename}`; // this is image uri
+        return `http://${getUri()}/images/${filename}`; // this is image uri
       } else {
-        console.error(`Failed to retrieve image for hotel ${hotelId}`);
+        //..console.error(`Failed to retrieve image for hotel ${hotelId}`);
         return null;
       }
     } catch (error) {
-      console.error(`Error fetching image for hotel ${hotelId}:`, error);
+      //..console.error(`Error fetching image for hotel ${hotelId}:`, error);
       return null;
     }
   };
@@ -163,100 +191,132 @@ const SearchResultsPage = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.avatarButton}
-        onPress={() => setShowSearchForm(!showSearchForm)}
-      >
-        <Ionicons name="search" size={24} color="#004051" />
-      </TouchableOpacity>
-      {showSearchForm && (
-        <View>
-          <Text style={styles.title}>Search Hotels</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Hotel Name"
-            value={hotelName}
-            onChangeText={setHotelName}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Rating"
-            value={rating}
-            onChangeText={setRating}
-            keyboardType="numeric"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Min Price"
-            value={minPrice}
-            onChangeText={setMinPrice}
-            keyboardType="numeric"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Max Price"
-            value={maxPrice}
-            onChangeText={setMaxPrice}
-            keyboardType="numeric"
-          />
-          <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-            <Text style={styles.datePickerText}>
-              Start Date: {startDate.toISOString().split("T")[0]}
-            </Text>
-          </TouchableOpacity>
-          {showStartDatePicker && (
-            <DateTimePicker
-              value={startDate}
-              mode="date"
-              display="default"
-              onChange={onStartDateChange}
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        <TouchableOpacity
+          style={styles.avatarButton}
+          onPress={() => setShowSearchForm(!showSearchForm)}
+        >
+          <Ionicons name="search" size={24} color="#004051" />
+        </TouchableOpacity>
+        {showSearchForm && (
+          <View>
+            <Text style={styles.title}>Search Hotels</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Hotel Name"
+              value={hotelName}
+              onChangeText={setHotelName}
             />
-          )}
-          <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-            <Text style={styles.datePickerText}>
-              End Date: {endDate.toISOString().split("T")[0]}
-            </Text>
-          </TouchableOpacity>
-          {showEndDatePicker && (
-            <DateTimePicker
-              value={endDate}
-              mode="date"
-              display="default"
-              onChange={onEndDateChange}
+            <TextInput
+              style={styles.input}
+              placeholder="Rating"
+              value={rating}
+              onChangeText={setRating}
+              keyboardType="numeric"
             />
-          )}
-          <TextInput
-            style={styles.input}
-            placeholder="City"
-            value={city}
-            onChangeText={setCity}
-          />
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => handleSearch()}
-          >
-            <Text style={styles.buttonText}>Search</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      <FlatList
-        data={hotels}
-        keyExtractor={(item) => item.hotelId}
-        renderItem={({ item }) => <HotelCard hotel={item} />}
-        ListEmptyComponent={
-          <Text style={styles.noHotelsText}>No hotels found</Text>
-        }
-      />
-    </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Min Price"
+              value={minPrice}
+              onChangeText={setMinPrice}
+              keyboardType="numeric"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Max Price"
+              value={maxPrice}
+              onChangeText={setMaxPrice}
+              keyboardType="numeric"
+            />
+            {Platform.OS === "web" ? (
+              <>
+                <View style={styles.webDatePicker}>
+                  <Text style={styles.dateLabel}>Start Date</Text>
+                  <input
+                    type="date"
+                    value={startDate.toISOString().split("T")[0]}
+                    onChange={(e) => setStartDate(new Date(e.target.value))}
+                    style={styles.dateInput}
+                  />
+                </View>
+                <View style={styles.webDatePicker}>
+                  <Text style={styles.dateLabel}>End Date</Text>
+                  <input
+                    type="date"
+                    value={endDate.toISOString().split("T")[0]}
+                    onChange={(e) => setEndDate(new Date(e.target.value))}
+                    style={styles.dateInput}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
+                  <Text style={styles.datePickerText}>
+                    Start Date: {startDate.toISOString().split("T")[0]}
+                  </Text>
+                </TouchableOpacity>
+                {showStartDatePicker && (
+                  <DateTimePicker
+                    value={startDate}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={handleStartDateChange}
+                  />
+                )}
+                <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
+                  <Text style={styles.datePickerText}>
+                    End Date: {endDate.toISOString().split("T")[0]}
+                  </Text>
+                </TouchableOpacity>
+                {showEndDatePicker && (
+                  <DateTimePicker
+                    value={endDate}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={handleEndDateChange}
+                  />
+                )}
+              </>
+            )}
+            <TextInput
+              style={styles.input}
+              placeholder="City"
+              value={city}
+              onChangeText={setCity}
+            />
+            <TouchableOpacity
+              style={styles.button}
+              onPress={() => handleSearch()}
+            >
+              <Text style={styles.buttonText}>Search</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        <FlatList
+          data={hotels}
+          keyExtractor={(item) => item.hotelId}
+          renderItem={({ item }) => <HotelCard hotel={item} />}
+          ListEmptyComponent={
+            <Text style={styles.noHotelsText}>No hotels found</Text>
+          }
+        />
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    //flex: 1,
     padding: 20,
     backgroundColor: "#fff",
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    height: 0,
+    //padding: 20,
   },
   avatarButton: {
     position: "absolute",
@@ -290,6 +350,33 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 16,
+  },
+  /*datePickerText: {
+    height: 40,
+    borderColor: "#ddd",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    backgroundColor: "#f0f0f0",
+    textAlign: "center",
+    lineHeight: 40,
+  },*/
+  webDatePicker: {
+    marginBottom: 20,
+  },
+  dateLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  dateInput: {
+    height: 40,
+    borderColor: "#ddd",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    backgroundColor: "#f0f0f0",
+    width: "100%",
   },
   datePickerText: {
     height: 40,

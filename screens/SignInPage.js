@@ -15,28 +15,29 @@ const SignInPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigation = useNavigation();
- 
+
   const handleSignIn = async () => {
-    Alert.alert("asd");
-    console.log("asfs");
+    //Alert.alert("haa");
+    //Alert.alert("asd");
+    //console.log("asfs");
     try {
-      const response = await fetch(`https://${getUri()}/login`, {
+      const response = await fetch(`http://${getUri()}/api/users/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept":"*/*"
+          Accept: "*/*",
         },
         body: JSON.stringify({ email, password }),
       });
-      Alert.alert(response);
-      console.log(response);
+      Alert.alert(response.text);
+      //console.log(response);
 
       if (response.ok) {
         const token = await response.text(); // Read the response as plain text
         await AsyncStorage.setItem("authToken", token);
 
         // Fetch all users
-        const usersResponse = await fetch(`https://${getUri()}/api/users`, {
+        const usersResponse = await fetch(`http://${getUri()}/api/users`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },

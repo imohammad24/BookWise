@@ -8,6 +8,7 @@ import {
   Modal,
   Button,
   Platform,
+  ScrollView,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -41,6 +42,7 @@ const RoomsPage = () => {
           hotelName: "Default Hotel",
           hotelDescription: "This is a default hotel description.",
           rating: 4,
+          type: "Default Type", // Added this line
         });
         setRooms([
           {
@@ -63,7 +65,7 @@ const RoomsPage = () => {
       } else {
         try {
           const response = await fetch(
-            `https://${getUri()}/api/hotel?hotelId=${initialHotel.hotelId}`,
+            `http://${getUri()}/api/hotel?hotelId=${initialHotel.hotelId}`,
             {
               method: "GET",
               headers: {
@@ -74,10 +76,28 @@ const RoomsPage = () => {
 
           if (response.ok) {
             const hotelData = await response.json();
-            setHotel(hotelData.hotels[0]);
+            const hotelTypeResponse = await fetch(
+              `http://${getUri()}/api/hotelType/${initialHotel.hotelId}`,
+              {
+                method: "GET",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            if (hotelTypeResponse.ok) {
+              const hotelTypeData = await hotelTypeResponse.json();
+              setHotel({
+                ...hotelData.hotels[0],
+                type: hotelTypeData.type,
+              });
+            } else {
+              //..console.error("Failed to fetch hotel type");
+            }
 
             const roomsResponse = await fetch(
-              `https://${getUri()}/api/room?hotelID=${initialHotel.hotelId}`,
+              `http://${getUri()}/api/room?hotelID=${initialHotel.hotelId}`,
               {
                 method: "GET",
                 headers: {
@@ -91,7 +111,7 @@ const RoomsPage = () => {
               const roomsWithTypes = await Promise.all(
                 roomsData.rooms.map(async (room) => {
                   const roomTypeResponse = await fetch(
-                    `https://${getUri()}${
+                    `http://${getUri()}${
                       room.links.find((link) => link.rel === "room type").href
                     }`,
                     {
@@ -105,7 +125,7 @@ const RoomsPage = () => {
                     const roomTypeData = await roomTypeResponse.json();
                     return { ...room, roomType: roomTypeData.type };
                   } else {
-                    console.error("Failed to fetch room type");
+                    //..console.error("Failed to fetch room type");
                     return room;
                   }
                 })
@@ -121,11 +141,11 @@ const RoomsPage = () => {
 
               setRooms(roomsWithImages);
             } else {
-              console.error("Failed to fetch rooms");
+              //..console.error("Failed to fetch rooms");
             }
 
             const amenitiesResponse = await fetch(
-              `https://${getUri()}/api/hotel/${initialHotel.hotelId}/amenities`,
+              `http://${getUri()}/api/hotel/${initialHotel.hotelId}/amenities`,
               {
                 method: "GET",
                 headers: {
@@ -138,7 +158,7 @@ const RoomsPage = () => {
               const amenitiesData = await amenitiesResponse.json();
               setAmenities(amenitiesData);
             } else {
-              console.error("Failed to fetch amenities");
+              //..console.error("Failed to fetch amenities");
             }
 
             const imagePath = await fetchHotelImagePath(initialHotel.hotelId);
@@ -147,12 +167,10 @@ const RoomsPage = () => {
             const locationData = await fetchHotelLocation(initialHotel.hotelId);
             setLocation(locationData);
           } else {
-            
-            console.error("Failed to fetch hotel details");
+            //..console.error("Failed to fetch hotel details");
           }
         } catch (error) {
-          
-          console.error("Error fetching hotel details:", error);
+          //..console.error("Error fetching hotel details:", error);
         }
       }
     };
@@ -163,7 +181,7 @@ const RoomsPage = () => {
   const fetchRoomImages = async (roomId) => {
     try {
       const response = await fetch(
-        `https://${getUri()}/api/room/${roomId}/roomImage`,
+        `http://${getUri()}/api/room/${roomId}/roomImage`,
         {
           method: "GET",
           headers: {
@@ -176,14 +194,14 @@ const RoomsPage = () => {
         const data = await response.json();
         return data.roomImages.map((image) => {
           const filename = image.imageBath.split("/").pop();
-          return `http://localhost:3000/images/${filename}`;
+          return `http://${getUri()}/images/${filename}`;
         });
       } else {
-        console.error(`Failed to retrieve images for room ${roomId}`);
+        //..console.error(`Failed to retrieve images for room ${roomId}`);
         return [];
       }
     } catch (error) {
-      console.error(`Error fetching images for room ${roomId}:`, error);
+      //..console.error(`Error fetching images for room ${roomId}:`, error);
       return [];
     }
   };
@@ -191,7 +209,7 @@ const RoomsPage = () => {
   const fetchHotelImagePath = async (hotelId) => {
     try {
       const response = await fetch(
-        `https://${getUri()}/api/hotel/${hotelId}/hotelImage`,
+        `http://${getUri()}/api/hotel/${hotelId}/hotelImage`,
         {
           method: "GET",
           headers: {
@@ -203,13 +221,13 @@ const RoomsPage = () => {
       if (response.ok) {
         const data = await response.json();
         const filename = data.imagePath.split("/").pop();
-        return `http://localhost:3000/images/${filename}`;
+        return `http://${getUri()}/images/${filename}`;
       } else {
-        console.error(`Failed to retrieve image for hotel ${hotelId}`);
+        //..console.error(`Failed to retrieve image for hotel ${hotelId}`);
         return null;
       }
     } catch (error) {
-      console.error(`Error fetching image for hotel ${hotelId}:`, error);
+      //..console.error(`Error fetching image for hotel ${hotelId}:`, error);
       return null;
     }
   };
@@ -217,7 +235,7 @@ const RoomsPage = () => {
   const fetchHotelLocation = async (hotelId) => {
     try {
       const response = await fetch(
-        `https://${getUri()}/api/hotel/${hotelId}/location`,
+        `http://${getUri()}/api/hotel/${hotelId}/location`,
         {
           method: "GET",
           headers: {
@@ -230,18 +248,31 @@ const RoomsPage = () => {
         const locationData = await response.json();
         return locationData;
       } else {
-        console.error("Failed to fetch hotel location");
+        //..console.error("Failed to fetch hotel location");
         return null;
       }
     } catch (error) {
-      console.error("Error fetching hotel location:", error);
+      //..console.error("Error fetching hotel location:", error);
       return null;
     }
   };
 
   const handleAddToCart = async (room) => {
-    setSelectedRoom(room);
-    setModalVisible(true);
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      if (!userId) {
+        navigation.navigate("SignIn"); // Navigate to the SignIn page if the user is not signed in
+        return;
+      }
+      setSelectedRoom(room);
+      setModalVisible(true);
+    } catch (error) {
+      //..console.error("Error checking user sign-in status:", error);
+      Alert.alert(
+        "Error",
+        "An error occurred while checking user sign-in status."
+      );
+    }
   };
 
   const handleConfirmDates = async () => {
@@ -264,7 +295,7 @@ const RoomsPage = () => {
       }
 
       const response = await fetch(
-        `https://${getUri()}/api/user/${userId}/Cart`,
+        `http://${getUri()}/api/user/${userId}/Cart`,
         {
           method: "POST",
           headers: {
@@ -279,20 +310,20 @@ const RoomsPage = () => {
         setModalVisible(false);
         Alert.alert("Success", "Room added to cart successfully!");
       } else {
-        console.error("Failed to add room to cart");
+        //..console.error("Failed to add room to cart");
         Alert.alert("Error", "Failed to add room to cart");
       }
     } catch (error) {
-      console.error("Error adding item to cart:", error);
+      //..console.error("Error adding item to cart:", error);
       Alert.alert("Error", "Failed to add room to cart");
     }
   };
 
-  const handleStartDateChange = (date) => {
+  /*const handleStartDateChange = (date) => {
     // setShowStartDatePicker(false);
     // setStartDate(date);
     const currentDate = selectedDate || startDate;
-    setShowStartDatePicker(Platform.OS === "ios");
+    setShowStartDatePicker(Platform.OS === "android");
     setStartDate(currentDate);
   };
 
@@ -300,115 +331,136 @@ const RoomsPage = () => {
     // setShowEndDatePicker(false);
     // setEndDate(date);
     const currentDate = selectedDate || startDate;
-    setShowStartDatePicker(Platform.OS === "ios");
+    setShowStartDatePicker(Platform.OS === "android");
     setStartDate(currentDate);
+  };*/
+  const handleStartDateChange = (event, selectedDate) => {
+    setShowStartDatePicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setStartDate(selectedDate);
+    }
+  };
+
+  const handleEndDateChange = (event, selectedDate) => {
+    setShowEndDatePicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setEndDate(selectedDate);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      {hotel ? (
-        <HotelDetails
-          hotel={hotel}
-          amenities={amenities}
-          imagePath={imagePath}
-          location={location}
-        />
-      ) : (
-        <Text>Loading hotel details...</Text>
-      )}
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        {hotel ? (
+          <HotelDetails
+            hotel={hotel}
+            amenities={amenities}
+            imagePath={imagePath}
+            location={location}
+          />
+        ) : (
+          <Text>Loading hotel details...</Text>
+        )}
 
-      {rooms.length > 0 ? (
-        <RoomList rooms={rooms} onAddToCart={handleAddToCart} />
-      ) : (
-        <Text>Loading rooms...</Text>
-      )}
+        {rooms.length > 0 ? (
+          <RoomList rooms={rooms} onAddToCart={handleAddToCart} />
+        ) : (
+          <Text>Loading rooms...</Text>
+        )}
 
-      <Modal
-        visible={isModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Dates</Text>
-            {Platform.OS === "web" ? (
-              <>
-                <View style={styles.webDatePicker}>
-                  <Text style={styles.dateLabel}>Start Date</Text>
-                  <input
-                    type="date"
-                    value={startDate.toISOString().split("T")[0]}
-                    onChange={(e) => setStartDate(new Date(e.target.value))}
-                    style={styles.dateInput}
-                  />
-                </View>
-                <View style={styles.webDatePicker}>
-                  <Text style={styles.dateLabel}>End Date</Text>
-                  <input
-                    type="date"
-                    value={endDate.toISOString().split("T")[0]}
-                    onChange={(e) => setEndDate(new Date(e.target.value))}
-                    style={styles.dateInput}
-                  />
-                </View>
-              </>
-            ) : (
-              <>
-                <View style={styles.datePicker}>
-                  <Button
-                    onPress={() => setShowStartDatePicker(true)}
-                    title="Select Start Date"
-                  />
-                  {showStartDatePicker && (
-                    <DateTimePicker
-                      value={startDate}
-                      mode="date"
-                      display="default"
-                      onChange={handleStartDateChange}
+        <Modal
+          visible={isModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Dates</Text>
+              {Platform.OS === "web" ? (
+                <>
+                  <View style={styles.webDatePicker}>
+                    <Text style={styles.dateLabel}>Start Date</Text>
+                    <input
+                      type="date"
+                      value={startDate.toISOString().split("T")[0]}
+                      onChange={(e) => setStartDate(new Date(e.target.value))}
+                      style={styles.dateInput}
                     />
-                  )}
-                </View>
-                <View style={styles.datePicker}>
-                  <Button
-                    onPress={() => setShowEndDatePicker(true)}
-                    title="Select End Date"
-                  />
-                  {showEndDatePicker && (
-                    <DateTimePicker
-                      value={endDate}
-                      mode="date"
-                      display="default"
-                      onChange={handleEndDateChange}
+                  </View>
+                  <View style={styles.webDatePicker}>
+                    <Text style={styles.dateLabel}>End Date</Text>
+                    <input
+                      type="date"
+                      value={endDate.toISOString().split("T")[0]}
+                      onChange={(e) => setEndDate(new Date(e.target.value))}
+                      style={styles.dateInput}
                     />
-                  )}
-                </View>
-              </>
-            )}
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleConfirmDates}
-            >
-              <Text style={styles.buttonText}>Submit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.datePicker}>
+                    <Button
+                      onPress={() => setShowStartDatePicker(true)}
+                      title="Select Start Date"
+                    />
+                    {showStartDatePicker && (
+                      <DateTimePicker
+                        value={startDate}
+                        mode="date"
+                        display="default"
+                        onChange={handleStartDateChange}
+                      />
+                    )}
+                  </View>
+                  <View style={styles.datePicker}>
+                    <Button
+                      onPress={() => setShowEndDatePicker(true)}
+                      title="Select End Date"
+                    />
+                    {showEndDatePicker && (
+                      <DateTimePicker
+                        value={endDate}
+                        mode="date"
+                        display="default"
+                        onChange={handleEndDateChange}
+                      />
+                    )}
+                  </View>
+                </>
+              )}
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleConfirmDates}
+              >
+                <Text style={styles.buttonText}>Submit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    //flex: 1,
     padding: 20,
     backgroundColor: "#fff",
+    height: "auto",
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    //height: 0,
+    //padding: 20,
   },
   modalContainer: {
     flex: 1,

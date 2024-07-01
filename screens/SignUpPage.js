@@ -29,7 +29,7 @@ const SignUpPage = () => {
     }
 
     try {
-      const response = await fetch(`https://${getUri()}/api/users`, {
+      const response = await fetch(`http://${getUri()}/api/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -51,6 +51,7 @@ const SignUpPage = () => {
             onPress: () => navigation.navigate("SignIn"),
           },
         ]);
+        navigation.navigate("SignIn");
       } else if (response.status === 409) {
         Alert.alert("Error", "Email is already registered");
       } else {
@@ -58,7 +59,7 @@ const SignUpPage = () => {
         Alert.alert("Error", errorData.message || "Sign-up failed");
       }
     } catch (error) {
-      console.error("Error during sign-up:", error);
+      //..console.error("Error during sign-up:", error);
       Alert.alert("Error", "An unexpected error occurred");
     }
   };
